@@ -10,15 +10,17 @@ export class LogView extends HTMLElement
 	private textContainer: HTMLElement;
 	private charWidth: number;
 	private logViewRect: ClientRect;
+	private _highlighters = {} as { [name: string]: LogViewHighlighter };
+	private tokenStyle!: HTMLStyleElement;
 	
 	constructor()
 	{
 		super();
 
 		this.shadow = this.attachShadow({ mode: "open" });
-		const style = document.createElement("style");
-		this.shadow.appendChild(style);
-		style.innerHTML = `
+		const elementStyle = document.createElement("style");
+		this.shadow.appendChild(elementStyle);
+		elementStyle.innerHTML = `
 			:host {
 				overflow: auto;
 				contain: strict;
@@ -35,6 +37,9 @@ export class LogView extends HTMLElement
 				position: absolute;
 			}
 		`;
+
+		this.tokenStyle = document.createElement("style");
+		this.shadow.appendChild(this.tokenStyle);
 
 		this.textContainer = document.createElement("div");
 		this.textContainer.id = "text-container";
@@ -60,6 +65,28 @@ export class LogView extends HTMLElement
 		delete this.wrappedLines;
 		this.rawLines = this.splitLines(logText);
 		this.render();
+	}
+
+	public set highlighters(highlighters: { [name: string]: LogViewHighlighter })
+	{
+		this._highlighters = highlighters;
+
+		let classText = "";
+		
+		for (let highlighterName in highlighters)
+		{
+			const highlighter = highlighters[highlighterName];
+			classText += `.token-${highlighterName} {`;
+
+			if (highlighter.style.bold)
+				classText += `\tfont-weight: bold;\n`;
+			if (highlighter.style.textColor)
+				classText += `\tcolor: ${highlighter.style.textColor};\n`;
+
+			classText += `}\n`;
+		}
+
+		this.tokenStyle.textContent = classText;
 	}
 
 	private splitLines(logText: string): string[]
@@ -124,11 +151,14 @@ export class LogView extends HTMLElement
 
 		for (let i = lineRenderStartIndex; i < lineRenderEndIndex; i++)
 		{
-			const line = this.wrappedLines[i];
+			const line = this.wrappedLines[i].trim();
 			const lineElement = document.createElement("div");
 			lineElement.className = "line";
 			lineElement.style.top = `${i * 20}px`;
-			lineElement.textContent = line.trim();
+
+			const tokens = this.parseLineForHighlighting(line);
+
+			lineElement.innerHTML = tokens.map(t => t.name ? `<span class="token-${t.name}">${t.text}</span>` : t.text).join("");
 			fragment.appendChild(lineElement);
 		}
 
@@ -140,6 +170,59 @@ export class LogView extends HTMLElement
 	{
 		this.render();
 	}
+
+	private parseLineForHighlighting(lineText: string): { name?: string, text: string }[]
+	{
+		const tokens = [{ text: lineText }] as ReturnType<LogView["parseLineForHighlighting"]>;
+		
+		for (let highlighterName in this._highlighters)
+		{
+			// Parse any fragments of the line text that haven't yet been identified as tokens
+			for (let tokenIndex = 0; tokenIndex < tokens.length; tokenIndex++)
+			{
+				const fragment = tokens[tokenIndex];
+				if (fragment.name) // This fragment has already been tokenized by another highlighter
+					continue;
+				
+				const highlighterPattern = new RegExp(this._highlighters[highlighterName].pattern, "gi");
+				let match;
+	
+				// TODO: Make this work for multiple matches for a single highlighter on a single line
+				if (match = highlighterPattern.exec(fragment.text))
+				{
+					console.log(match)
+
+					const tokensToReplaceWith = [];
+
+					if (match.index > 0)
+						tokensToReplaceWith.push({ text: fragment.text.substring(0, match.index) });
+					
+					tokensToReplaceWith.push({ name: highlighterName, text: match[0] });
+					
+					if (match.index + match[0].length < fragment.text.length)
+						tokensToReplaceWith.push({ text: fragment.text.substring(match.index + match[0].length) });
+
+					// Delete the current fragment and replace it with the new highlighted token,
+					// preceded and following by text fragment tokens.
+					tokens.splice(tokenIndex, 1, ...tokensToReplaceWith);
+				}
+			}
+		}
+		
+		return tokens;
+	}
 }
 
 customElements.define("log-view", LogView);
+
+interface LogViewHighlighter
+{
+	pattern: RegExp;
+	style: LogViewTokenStyle;
+}
+
+interface LogViewTokenStyle
+{
+	textColor?: string;
+	bold?: boolean;
+}

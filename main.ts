@@ -27,12 +27,15 @@ async function onPageLoad()
 		for await (let e of dirHandle.getEntries())
 			fileListEntries.push(e);
 
-		// dirHandle.requestPermission({ writable: true });
 		renderFileList();
 	};
 
 	logView = document.getElementById("file-display") as LogView;
-
+	logView.highlighters = {
+		"level": { pattern: /INFO|DEBUG|WARN/, style: { textColor: "#6f6f6f" } },
+		"level-error": { pattern: /ERROR/, style: { textColor: "#c50000", bold: true } },
+		"timestamp": { pattern: /\d{1,4}-\d{1,2}-\d{1,2}\s+\d{1,2}:\d{1,2}:\d{1,2},\d{3}/, style: { textColor: "#000000" } },
+	};
 }
 
 function renderFileList()
