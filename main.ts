@@ -18,7 +18,15 @@ async function onPageLoad()
 	const button = document.querySelector("button") as HTMLButtonElement;
 	button.onclick = async () =>
 	{
-		dirHandle = await window.chooseFileSystemEntries({ type: "open-directory" }) as FileSystemDirectoryHandle;
+		try
+		{
+			dirHandle = await window.chooseFileSystemEntries({ type: "open-directory" }) as FileSystemDirectoryHandle;
+		}
+		catch (e)
+		{
+			// Chrome 80 is not spec compliant; this is fixed in Chrome 82
+			dirHandle = await window.chooseFileSystemEntries({ type: "openDirectory" as any }) as FileSystemDirectoryHandle;
+		}
 
 		fileListEntries.length = 0;
 

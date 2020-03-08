@@ -1,5 +1,6 @@
 <html>
 	<head>
+		<meta http-equiv="origin-trial" content="AjcLzFXD+r9yC1bNwfUj7dWmapBt0xHdf8+0edvikkFFqCFEeizlaDlxbawBVrsfwyA17LpR/e1ocbxM+cUKoAoAAABTeyJvcmlnaW4iOiJodHRwczovL2V4YWdvLmRldjo0NDMiLCJmZWF0dXJlIjoiTmF0aXZlRmlsZVN5c3RlbSIsImV4cGlyeSI6MTU4NzMzMjUyM30=">
 		<style>
 			:root {
 				font-family: Roboto, Sans-Serif;
@@ -57,6 +58,15 @@
 				margin: 0 20px 0 0;
 				box-sizing: border-box;
 			}
+			#open-button {
+				background-image: url(open.svg);
+				background-repeat: no-repeat;
+				background-position: center;
+				background-size: 22px;
+				border: none;
+				background-color: transparent;
+				cursor: pointer;
+			}
 		</style>
 		<script src="main.js" type="module"></script>
 	</head>	
@@ -66,7 +76,7 @@
 			<div id="file-list">
 				<ul id="file-list-items"></ul>
 				<input id="filename-pattern" value="WebReportsLog\.txt.*">
-				<button type="button"></button>
+				<button id="open-button" type="button"></button>
 			</div>
 			<log-view id="file-display"></log-view>
 			<div id="audits">
