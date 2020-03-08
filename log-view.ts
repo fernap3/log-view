@@ -5,7 +5,8 @@ export class LogView extends HTMLElement
 	private readonly LINE_HEIGHT = 20;
 	
 	private shadow: ShadowRoot;
-	private lines = [] as string[];
+	private rawLines = [] as string[];
+	private wrappedLines = [] as string[];
 	private scrollContainer: HTMLElement;
 	private charWidth: number;
 	private scrollContainerWidth: number;
@@ -44,7 +45,8 @@ export class LogView extends HTMLElement
 
 	public set value(logText: string)
 	{
-		this.lines = this.splitLines(logText);
+		this.rawLines = this.splitLines(logText);
+		this.wrappedLines = this.wordWrapLines(this.rawLines);
 		this.render();
 	}
 
@@ -55,7 +57,7 @@ export class LogView extends HTMLElement
 
 	private wordWrapLines(loglines: string[]): string[]
 	{
-		const maxCharsPerLine = Math.floor(this.scrollContainerWidth / this.charWidth);
+		const maxCharsPerLine = Math.floor(this.scrollContainerWidth / this.charWidth) - 2; // -2 just for a buffer of error
 		const wrappedLines = [] as string[];
 
 		for (let line of loglines)
@@ -90,7 +92,7 @@ export class LogView extends HTMLElement
 
 	private render(): void
 	{
-		const linesToDisplay = this.wordWrapLines(this.lines).slice(0, 200);
+		const linesToDisplay = this.wrappedLines.slice(0, 200);
 		const lineElements = linesToDisplay.map(l => `<div class="line">${l.trim()}</div>`);
 		this.scrollContainer.innerHTML = lineElements.join("\n");
 	}
