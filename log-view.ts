@@ -41,12 +41,19 @@ export class LogView extends HTMLElement
 
 		this.charWidth = this.measureCharacterWidth();
 		this.scrollContainerWidth = this.scrollContainer.getBoundingClientRect().width;
+
+		const resizeObserver = new ResizeObserver(entries =>
+		{
+			this.scrollContainerWidth = this.scrollContainer.getBoundingClientRect().width;
+			this.render();
+		});
+
+		resizeObserver.observe(this.scrollContainer);
 	}
 
 	public set value(logText: string)
 	{
 		this.rawLines = this.splitLines(logText);
-		this.wrappedLines = this.wordWrapLines(this.rawLines);
 		this.render();
 	}
 
@@ -92,6 +99,8 @@ export class LogView extends HTMLElement
 
 	private render(): void
 	{
+		this.wrappedLines = this.wordWrapLines(this.rawLines);
+		
 		const linesToDisplay = this.wrappedLines.slice(0, 200);
 		const lineElements = linesToDisplay.map(l => `<div class="line">${l.trim()}</div>`);
 		this.scrollContainer.innerHTML = lineElements.join("\n");
