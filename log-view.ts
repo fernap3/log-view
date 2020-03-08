@@ -6,10 +6,10 @@ export class LogView extends HTMLElement
 	
 	private shadow: ShadowRoot;
 	private rawLines = [] as string[];
-	private wrappedLines = [] as string[];
-	private scrollContainer: HTMLElement;
+	private wrappedLines?: string[];
+	private textContainer: HTMLElement;
 	private charWidth: number;
-	private scrollContainerWidth: number;
+	private logViewRect: ClientRect;
 	
 	constructor()
 	{
@@ -21,9 +21,10 @@ export class LogView extends HTMLElement
 		style.innerHTML = `
 			:host {
 				overflow: auto;
+				contain: strict;
 			}
-			
-			#scroll-container {
+
+			#text-container {
 				font-family: "Roboto Mono", monospace;
 				white-space: nowrap;
 				position: relative;
@@ -31,28 +32,32 @@ export class LogView extends HTMLElement
 
 			.line {
 				white-space: pre;
+				position: absolute;
 			}
 		`;
 
-		this.scrollContainer = document.createElement("div");
-		this.scrollContainer.id = "scroll-container";
-		this.scrollContainer.style.lineHeight = this.LINE_HEIGHT + "px";
-		this.shadow.appendChild(this.scrollContainer);
+		this.textContainer = document.createElement("div");
+		this.textContainer.id = "text-container";
+		this.textContainer.style.lineHeight = this.LINE_HEIGHT + "px";
+		this.shadow.appendChild(this.textContainer);
 
 		this.charWidth = this.measureCharacterWidth();
-		this.scrollContainerWidth = this.scrollContainer.getBoundingClientRect().width;
+		this.logViewRect = this.getBoundingClientRect();
 
 		const resizeObserver = new ResizeObserver(entries =>
 		{
-			this.scrollContainerWidth = this.scrollContainer.getBoundingClientRect().width;
+			this.logViewRect = this.getBoundingClientRect();
 			this.render();
 		});
 
-		resizeObserver.observe(this.scrollContainer);
+		resizeObserver.observe(this.textContainer);
+
+		this.addEventListener("scroll", () => this.onScroll(), { passive: true });
 	}
 
 	public set value(logText: string)
 	{
+		delete this.wrappedLines;
 		this.rawLines = this.splitLines(logText);
 		this.render();
 	}
@@ -64,17 +69,19 @@ export class LogView extends HTMLElement
 
 	private wordWrapLines(loglines: string[]): string[]
 	{
-		const maxCharsPerLine = Math.floor(this.scrollContainerWidth / this.charWidth) - 2; // -2 just for a buffer of error
+		const maxCharsPerLine = Math.floor(this.logViewRect.width / this.charWidth) - 2; // -2 just for a buffer of error
 		const wrappedLines = [] as string[];
 
 		for (let line of loglines)
 		{
 			if (line.length <= maxCharsPerLine)
 				wrappedLines.push(line);
-
-			wrappedLines.push(
-				...wordWrap(line, { width: maxCharsPerLine, newline: "\n" }).split("\n")
-			);
+			else
+			{
+				wrappedLines.push(
+					...wordWrap(line, { width: maxCharsPerLine, newline: "\n" }).split("\n")
+				);
+			}
 		}
 
 		return wrappedLines;
@@ -84,7 +91,7 @@ export class LogView extends HTMLElement
 	{
 		const numCharsToMeasure = 10;
 		const measureContainer = document.createElement("div");
-		this.scrollContainer.appendChild(measureContainer);
+		this.textContainer.appendChild(measureContainer);
 		measureContainer.style.position = "absolute";
 		measureContainer.style.top = "0";
 		measureContainer.style.left = "0";
@@ -99,11 +106,39 @@ export class LogView extends HTMLElement
 
 	private render(): void
 	{
-		this.wrappedLines = this.wordWrapLines(this.rawLines);
+		if (!this.wrappedLines)
+			this.wrappedLines = this.wordWrapLines(this.rawLines);
 		
-		const linesToDisplay = this.wrappedLines.slice(0, 200);
-		const lineElements = linesToDisplay.map(l => `<div class="line">${l.trim()}</div>`);
-		this.scrollContainer.innerHTML = lineElements.join("\n");
+		this.textContainer.style.height = this.wrappedLines.length * this.LINE_HEIGHT + "px";
+
+		const TOP_MARGIN_LINES = 20;
+		const BOTTOM_MARGIN_LINES = 20;
+
+		const closestLineToTop = Math.floor(this.scrollTop / this.LINE_HEIGHT);
+		const numLinesCanFitInViewport = Math.ceil(this.logViewRect.height / this.LINE_HEIGHT);
+		
+		const lineRenderStartIndex = Math.max(0, closestLineToTop - TOP_MARGIN_LINES);
+		const lineRenderEndIndex = Math.min(this.wrappedLines.length, closestLineToTop + numLinesCanFitInViewport + BOTTOM_MARGIN_LINES);
+		
+		const fragment = document.createDocumentFragment();
+
+		for (let i = lineRenderStartIndex; i < lineRenderEndIndex; i++)
+		{
+			const line = this.wrappedLines[i];
+			const lineElement = document.createElement("div");
+			lineElement.className = "line";
+			lineElement.style.top = `${i * 20}px`;
+			lineElement.textContent = line.trim();
+			fragment.appendChild(lineElement);
+		}
+
+		this.textContainer.innerHTML = "";
+		this.textContainer.appendChild(fragment);
+	}
+
+	private onScroll(): void
+	{
+		this.render();
 	}
 }
 
