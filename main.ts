@@ -1,4 +1,5 @@
-declare var Prism: any;
+import { LogView } from "./log-view.js";
+new LogView()
 
 let dirHandle: FileSystemDirectoryHandle;
 const fileListEntries = [] as FileSystemHandle[];
@@ -11,6 +12,7 @@ const linePrefixInput = document.getElementById("line-prefix-pattern") as HTMLIn
 linePrefixInput.onchange = () => renderFileContents();
 
 let selectedFileHandle: FileSystemHandle;
+let logView: LogView;
 
 async function onPageLoad()
 {
@@ -29,6 +31,9 @@ async function onPageLoad()
 		// dirHandle.requestPermission({ writable: true });
 		renderFileList();
 	};
+
+	logView = document.getElementById("file-display") as LogView;
+
 }
 
 function renderFileList()
@@ -65,13 +70,11 @@ async function renderFileContents(entry = selectedFileHandle)
 {
 	const handle = await dirHandle.getFile(entry.name);
 	const file = await handle.getFile();
-	const codeArea = document.getElementById("file-display") as HTMLPreElement;
 
 	const fileText = (await file.text()).substr(0, 200000);
-	codeArea.textContent = fileText;
+	logView.value = fileText;
 
-
-	codeArea.scrollTop = 0;
+	logView.scrollTop = 0;
 
 	const auditResults = runAudits(fileText);
 	renderAudits(auditResults);
