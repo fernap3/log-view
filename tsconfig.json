@@ -3,7 +3,8 @@
 		"module": "ESNext",
 		"target": "ESNext",
 		"strict": true,
-		"sourceMap": true
+		"sourceMap": true,
+		"importsNotUsedAsValues": "preserve"
 	},
 	"include": [
 		"**/*"

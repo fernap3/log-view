@@ -1,5 +1,4 @@
 import { LogView } from "./log-view.js";
-new LogView()
 
 let dirHandle: FileSystemDirectoryHandle;
 const fileListEntries = [] as FileSystemHandle[];
@@ -71,7 +70,7 @@ async function renderFileContents(entry = selectedFileHandle)
 	const handle = await dirHandle.getFile(entry.name);
 	const file = await handle.getFile();
 
-	const fileText = (await file.text()).substr(0, 200000);
+	const fileText = await file.text();
 	logView.value = fileText;
 
 	logView.scrollTop = 0;
