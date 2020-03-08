@@ -12,7 +12,8 @@ export class LogView extends HTMLElement
 	private _messageStartPattern = /\d{1,4}-\d{1,2}-\d{1,2}\s+\d{1,2}:\d{1,2}:\d{1,2},\d{3}/;
 	private tokenStyle!: HTMLStyleElement;
 	private lines = [] as LogViewLine[];
-	private wrappedLines?: LogViewLine[];
+	private wordWrappedLines?: LogViewLine[];
+	private messageBoundaries = [] as { lineStart: number, lineEnd: number }[];
 	private charWidth: number;
 	
 	constructor()
@@ -36,6 +37,10 @@ export class LogView extends HTMLElement
 
 			.line {
 				white-space: pre;
+				/*position: absolute;*/
+			}
+
+			.message {
 				position: absolute;
 			}
 		`;
@@ -64,12 +69,36 @@ export class LogView extends HTMLElement
 
 	public set value(logText: string)
 	{
-		delete this.wrappedLines;
+		delete this.wordWrappedLines;
 		this.rawLines = this.splitLines(logText);
 
 		// This should be done in a worker, with tokens streaming back
 		// asynchronously to the viewer
 		this.lines = this.rawLines.map(l => this.parseLine(l));
+
+		this.messageBoundaries = [];
+
+		let curMessageStart = 0;
+		let firstLineSeen = false;
+
+		for (let lineNum = 0; lineNum < this.lines.length; lineNum++)
+		{
+			const match = this.lines[lineNum][0].text.match(this._messageStartPattern);
+
+			if ((!match || match.index !== 0) && !firstLineSeen)
+				throw "The beginning of logText must match messageStartPattern. Try setting log-view.messageStartPattern";
+
+				
+			if (firstLineSeen && match && match.index === 0)
+			{
+				this.messageBoundaries.push({ lineStart: curMessageStart, lineEnd: lineNum });
+				curMessageStart = lineNum;
+			}
+
+			firstLineSeen = true;
+		}
+
+		this.messageBoundaries.push({ lineStart: curMessageStart, lineEnd: this.lines.length });
 
 		this.render();
 	}
@@ -103,8 +132,11 @@ export class LogView extends HTMLElement
 
 	public scrollToMessage(messageNum: number): void
 	{
+		if (messageNum >= this.messageBoundaries.length || messageNum < 0)
+			throw "messageNum must be greater than zero and less than the number of parsed log messages";
+		
 		this.scroll({
-			top: messageNum * this.LINE_HEIGHT,
+			top: this.messageBoundaries[messageNum].lineStart * this.LINE_HEIGHT,
 			left: this.scrollLeft,
 			behavior: "smooth",
 		});
@@ -115,10 +147,10 @@ export class LogView extends HTMLElement
 		return logText.split(/\r?\n/);
 	}
 
-	private wordWrapLines(loglines: LogViewLine[]): LogViewLine[]
+	private wordWrapLines(logLines: LogViewLine[]): LogViewLine[]
 	{
 		// TODO: Implement word wrap that doesn't split in the middle of a token
-		return loglines;
+		return logLines;
 		
 		// const maxCharsPerLine = Math.floor(this.logViewRect.width / this.charWidth) - 2; // -2 just for a buffer of error
 		// const wrappedLines = [] as string[];
@@ -157,10 +189,10 @@ export class LogView extends HTMLElement
 
 	private render(): void
 	{
-		if (!this.wrappedLines)
-			this.wrappedLines = this.wordWrapLines(this.lines);
+		if (!this.wordWrappedLines)
+			this.wordWrappedLines = this.wordWrapLines(this.lines);
 		
-		this.textContainer.style.height = this.wrappedLines.length * this.LINE_HEIGHT + "px";
+		this.textContainer.style.height = this.wordWrappedLines.length * this.LINE_HEIGHT + "px";
 
 		const TOP_MARGIN_LINES = 20;
 		const BOTTOM_MARGIN_LINES = 20;
@@ -169,20 +201,40 @@ export class LogView extends HTMLElement
 		const numLinesCanFitInViewport = Math.ceil(this.logViewRect.height / this.LINE_HEIGHT);
 		
 		const lineRenderStartIndex = Math.max(0, closestLineToTop - TOP_MARGIN_LINES);
-		const lineRenderEndIndex = Math.min(this.wrappedLines.length, closestLineToTop + numLinesCanFitInViewport + BOTTOM_MARGIN_LINES);
+		const lineRenderEndIndex = Math.min(this.wordWrappedLines.length, closestLineToTop + numLinesCanFitInViewport + BOTTOM_MARGIN_LINES);
 		
 		const fragment = document.createDocumentFragment();
 
+		let curMessageElement = null as HTMLElement | null;
+		let currentMessageIndex = this.messageBoundaries.findIndex(m => m.lineStart <= lineRenderStartIndex && m.lineEnd > lineRenderStartIndex);
+
 		for (let i = lineRenderStartIndex; i < lineRenderEndIndex; i++)
 		{
+			let currentMessage = this.messageBoundaries[currentMessageIndex];
+			
+			if (i >= currentMessage.lineEnd)
+			{
+				currentMessageIndex += 1;
+				fragment.appendChild(curMessageElement!);
+				curMessageElement = null;
+			}
+
+			currentMessage = this.messageBoundaries[currentMessageIndex];
+			
+			if (!curMessageElement)
+			{
+				curMessageElement = document.createElement("div");
+				curMessageElement.className = "message";
+				curMessageElement.style.top = i * 20 + "px";
+			}
+			
 			const lineElement = document.createElement("div");
 			lineElement.className = "line";
-			lineElement.style.top = `${i * 20}px`;
 
-			const tokens = this.wrappedLines[i];
+			const tokens = this.wordWrappedLines[i];
 
 			lineElement.innerHTML = tokens.map(t => t.name ? `<span class="token-${t.name}">${t.text}</span>` : t.text).join("");
-			fragment.appendChild(lineElement);
+			curMessageElement.appendChild(lineElement);
 		}
 
 		this.textContainer.innerHTML = "";
@@ -213,8 +265,6 @@ export class LogView extends HTMLElement
 				// TODO: Make this work for multiple matches for a single highlighter on a single line
 				if (match = highlighterPattern.exec(fragment.text))
 				{
-					console.log(match)
-
 					const tokensToReplaceWith = [];
 
 					if (match.index > 0)
