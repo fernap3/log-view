@@ -9,6 +9,7 @@ export class LogView extends HTMLElement
 	private textContainer: HTMLElement;
 	private logViewRect: ClientRect;
 	private _highlighters = {} as { [name: string]: LogViewHighlighter };
+	private _messageStartPattern = /\d{1,4}-\d{1,2}-\d{1,2}\s+\d{1,2}:\d{1,2}:\d{1,2},\d{3}/;
 	private tokenStyle!: HTMLStyleElement;
 	private lines = [] as LogViewLine[];
 	private wrappedLines?: LogViewLine[];
@@ -93,6 +94,20 @@ export class LogView extends HTMLElement
 		}
 
 		this.tokenStyle.textContent = classText;
+	}
+
+	public set messageStartPattern(pattern: RegExp)
+	{
+		this._messageStartPattern = pattern;
+	}
+
+	public scrollToMessage(messageNum: number): void
+	{
+		this.scroll({
+			top: messageNum * this.LINE_HEIGHT,
+			left: this.scrollLeft,
+			behavior: "smooth",
+		});
 	}
 
 	private splitLines(logText: string): string[]
@@ -192,7 +207,7 @@ export class LogView extends HTMLElement
 				if (fragment.name) // This fragment has already been tokenized by another highlighter
 					continue;
 				
-				const highlighterPattern = new RegExp(this._highlighters[highlighterName].pattern, "gi");
+				const highlighterPattern = new RegExp(this._highlighters[highlighterName].pattern, "g");
 				let match;
 	
 				// TODO: Make this work for multiple matches for a single highlighter on a single line
@@ -241,3 +256,4 @@ interface LogViewToken {
 }
 
 type LogViewLine = LogViewToken[];
+type LogViewMessage = LogViewLine[];

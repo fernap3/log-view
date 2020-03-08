@@ -20,8 +20,6 @@ async function onPageLoad()
 	{
 		dirHandle = await window.chooseFileSystemEntries({ type: "open-directory" }) as FileSystemDirectoryHandle;
 
-		console.log(JSON.stringify(dirHandle))
-
 		fileListEntries.length = 0;
 
 		for await (let e of dirHandle.getEntries())
@@ -36,6 +34,8 @@ async function onPageLoad()
 		"level-error": { pattern: /ERROR/, style: { textColor: "#c50000", bold: true } },
 		"timestamp": { pattern: /\d{1,4}-\d{1,2}-\d{1,2}\s+\d{1,2}:\d{1,2}:\d{1,2},\d{3}/, style: { textColor: "#000000" } },
 	};
+
+	logView.messageStartPattern = /\d{1,4}-\d{1,2}-\d{1,2}\s+\d{1,2}:\d{1,2}:\d{1,2},\d{3}/; // timestamp
 }
 
 function renderFileList()
@@ -75,7 +75,6 @@ async function renderFileContents(entry = selectedFileHandle)
 
 	const fileText = await file.text();
 	logView.value = fileText;
-
 	logView.scrollTop = 0;
 
 	const auditResults = runAudits(fileText);
@@ -94,20 +93,20 @@ function runAudits(text: string)
 	while (match = regex.exec(text))
 		matches.push(match);
 
-	const lines = [] as Line[];
-	for (let i = 0; i < matches.length; i++)
+	const logMessages = [] as Line[];
+	for (let matchNum = 0; matchNum < matches.length; matchNum++)
 	{
-		const lineStart = matches[i].index;
-		const lineEnd = matches[i + 1]?.index ?? text.length;
+		const lineStart = matches[matchNum].index;
+		const lineEnd = matches[matchNum + 1]?.index ?? text.length;
 		const lineText = text.substring(lineStart, lineEnd);
 
-		lines.push( { text: lineText, num: i, start: lineStart, end: lineEnd });
+		logMessages.push( { text: lineText, num: matchNum, start: lineStart, end: lineEnd });
 	}
 
 	let results = {} as { [auditName: string]: AuditResult[] };
 	for (let audit of audits)
 	{
-		const r = audit.fn(lines);
+		const r = audit.fn(logMessages);
 		if (r.length)
 			results[audit.name] = r;
 	}
@@ -138,33 +137,23 @@ function renderAudits(results: { [auditName: string]: AuditResult[] })
 			sublist.appendChild(li);
 			li.textContent = result.text;
 
-			li.onclick = () => {
-				goToLine(result.lineNum);
-			};
+			li.onclick = () => logView.scrollToMessage(result.messageNum);
 		}
 	}
-}
-
-function goToLine(lineNum: number)
-{
-	const codeArea = document.getElementById("file-display") as HTMLPreElement;
-	const timestamps = [...codeArea.querySelectorAll(".token.timestamp")];
-
-	timestamps[lineNum].scrollIntoView();
 }
 
 audits.push(
 	{
 		name: "Errors",
-		fn: lines =>
+		fn: logMessages =>
 		{
 			const results = [];
-			for (let line of lines)
+			for (let line of logMessages)
 			{
 				if (/\sERROR/.test(line.text))
 				{
 					const errorTextPreview = /\[.+\]\s+(.*)$/m.exec(line.text)?.[1] ?? "Couldn't find error text";
-					results.push({ text: errorTextPreview, lineNum: line.num });
+					results.push({ text: errorTextPreview, messageNum: line.num });
 				}
 			}
 
@@ -173,15 +162,15 @@ audits.push(
 	},
 	{
 		name: "SQL Statements",
-		fn: lines =>
+		fn: logMessages =>
 		{
 			const results = [];
-			for (let line of lines)
+			for (let line of logMessages)
 			{
 				if (/SQL Stmt:/.test(line.text))
 				{
 					const errorTextPreview = "SQL query executed";
-					results.push({ text: errorTextPreview, lineNum: line.num });
+					results.push({ text: errorTextPreview, messageNum: line.num });
 				}
 			}
 
@@ -199,7 +188,7 @@ interface Audit {
 
 interface AuditResult {
 	text: string;
-	lineNum: number;
+	messageNum: number;
 }
 
 interface Line {
