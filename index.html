@@ -1,0 +1,88 @@
+<html>
+	<head>
+		<style>
+			:root {
+				font-family: Roboto, Sans-Serif;
+			}
+			input {
+				font-family: inherit;
+			}
+			#filename-pattern {
+				box-sizing: border-box;
+				height: 30px;
+			}
+			#line-prefix-pattern {
+				font-family: "Roboto Mono", monospace;
+			}
+			#panel-container {
+				display: flex;
+			}
+			#file-list {
+				height: 600px;
+				flex-basis: 300px;
+				min-width: 300px;
+				box-sizing:border-box;
+				border: 1px solid darkgrey;
+				margin-right: 20px;
+				overflow: auto;
+				display: grid;
+				grid-template-rows: auto 30px;
+				grid-template-columns: auto 30px;
+			}
+			#file-list-items {
+				overflow-y: auto;
+				grid-column: 1 / span 2;
+				margin: 0;
+			}
+			#audits {
+				flex-basis: 500px;
+				min-width: 500px;
+				border: 1px solid darkgrey;
+				height: 600px;
+				overflow: auto;
+				box-sizing: border-box;
+			}
+			li {
+				cursor: pointer;
+				user-select: none;
+			}
+			li[data-selected] {
+				background: lightgray;
+			}
+			log-view {
+				height: 600px;
+				flex-grow: 1;
+				border: 1px solid darkgrey;
+				margin-right: 20px;
+				overflow: auto;
+				margin: 0 20px 0 0;
+				box-sizing: border-box;
+			}
+			.token.level {
+				color: #6f6f6f;
+			}
+			.token.level-error {
+				color: #c50000;
+				font-weight: bold;
+			}
+			.token.timestamp {
+				color: black;
+			}
+		</style>
+		<script src="main.js" type="module"></script>
+	</head>	
+	<body>
+		<input id="line-prefix-pattern" value="\d{1,4}-\d{1,2}-\d{1,2}\s+\d{1,2}:\d{1,2}:\d{1,2},\d{3}">
+		<div id="panel-container">
+			<div id="file-list">
+				<ul id="file-list-items"></ul>
+				<input id="filename-pattern" value="WebReportsLog\.txt.*">
+				<button type="button"></button>
+			</div>
+			<log-view id="file-display" readonly>File contents will appear here</log-view>
+			<div id="audits">
+				<div class="pane-title">Audits</div>
+			</div>
+		</div>
+	</body>
+</html>

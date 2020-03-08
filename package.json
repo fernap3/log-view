@@ -1,0 +1,23 @@
+{
+  "name": "logtool",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+	"test": "echo \"Error: no test specified\" && exit 1",
+	"build": "node node_modules/typescript/bin/tsc -p tsconfig.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fernap3/logtool.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/fernap3/logtool/issues"
+  },
+  "homepage": "https://github.com/fernap3/logtool#readme",
+  "dependencies": {
+    "typescript": "^3.8.3"
+  }
+}
