@@ -6,12 +6,13 @@ export class LogView extends HTMLElement
 	
 	private shadow: ShadowRoot;
 	private rawLines = [] as string[];
-	private wrappedLines?: string[];
 	private textContainer: HTMLElement;
-	private charWidth: number;
 	private logViewRect: ClientRect;
 	private _highlighters = {} as { [name: string]: LogViewHighlighter };
 	private tokenStyle!: HTMLStyleElement;
+	private lines = [] as LogViewLine[];
+	private wrappedLines?: LogViewLine[];
+	private charWidth: number;
 	
 	constructor()
 	{
@@ -64,6 +65,11 @@ export class LogView extends HTMLElement
 	{
 		delete this.wrappedLines;
 		this.rawLines = this.splitLines(logText);
+
+		// This should be done in a worker, with tokens streaming back
+		// asynchronously to the viewer
+		this.lines = this.rawLines.map(l => this.parseLine(l));
+
 		this.render();
 	}
 
@@ -94,24 +100,27 @@ export class LogView extends HTMLElement
 		return logText.split(/\r?\n/);
 	}
 
-	private wordWrapLines(loglines: string[]): string[]
+	private wordWrapLines(loglines: LogViewLine[]): LogViewLine[]
 	{
-		const maxCharsPerLine = Math.floor(this.logViewRect.width / this.charWidth) - 2; // -2 just for a buffer of error
-		const wrappedLines = [] as string[];
+		// TODO: Implement word wrap that doesn't split in the middle of a token
+		return loglines;
+		
+		// const maxCharsPerLine = Math.floor(this.logViewRect.width / this.charWidth) - 2; // -2 just for a buffer of error
+		// const wrappedLines = [] as string[];
 
-		for (let line of loglines)
-		{
-			if (line.length <= maxCharsPerLine)
-				wrappedLines.push(line);
-			else
-			{
-				wrappedLines.push(
-					...wordWrap(line, { width: maxCharsPerLine, newline: "\n" }).split("\n")
-				);
-			}
-		}
+		// for (let line of loglines)
+		// {
+		// 	if (line.length <= maxCharsPerLine)
+		// 		wrappedLines.push(line);
+		// 	else
+		// 	{
+		// 		wrappedLines.push(
+		// 			...wordWrap(line, { width: maxCharsPerLine, newline: "\n" }).split("\n")
+		// 		);
+		// 	}
+		// }
 
-		return wrappedLines;
+		// return wrappedLines;
 	}
 
 	private measureCharacterWidth(): number
@@ -134,7 +143,7 @@ export class LogView extends HTMLElement
 	private render(): void
 	{
 		if (!this.wrappedLines)
-			this.wrappedLines = this.wordWrapLines(this.rawLines);
+			this.wrappedLines = this.wordWrapLines(this.lines);
 		
 		this.textContainer.style.height = this.wrappedLines.length * this.LINE_HEIGHT + "px";
 
@@ -151,12 +160,11 @@ export class LogView extends HTMLElement
 
 		for (let i = lineRenderStartIndex; i < lineRenderEndIndex; i++)
 		{
-			const line = this.wrappedLines[i].trim();
 			const lineElement = document.createElement("div");
 			lineElement.className = "line";
 			lineElement.style.top = `${i * 20}px`;
 
-			const tokens = this.parseLineForHighlighting(line);
+			const tokens = this.wrappedLines[i];
 
 			lineElement.innerHTML = tokens.map(t => t.name ? `<span class="token-${t.name}">${t.text}</span>` : t.text).join("");
 			fragment.appendChild(lineElement);
@@ -171,9 +179,9 @@ export class LogView extends HTMLElement
 		this.render();
 	}
 
-	private parseLineForHighlighting(lineText: string): { name?: string, text: string }[]
+	private parseLine(lineText: string): LogViewLine
 	{
-		const tokens = [{ text: lineText }] as ReturnType<LogView["parseLineForHighlighting"]>;
+		const tokens = [{ text: lineText }] as LogViewToken[];
 		
 		for (let highlighterName in this._highlighters)
 		{
@@ -226,3 +234,10 @@ interface LogViewTokenStyle
 	textColor?: string;
 	bold?: boolean;
 }
+
+interface LogViewToken {
+	name?: string;
+	text: string;
+}
+
+type LogViewLine = LogViewToken[];
