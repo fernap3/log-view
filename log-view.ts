@@ -1,3 +1,5 @@
+import { wrap as wordWrap } from "./word-wrap/index.js";
+
 export class LogView extends HTMLElement
 {
 	private readonly LINE_HEIGHT = 20;
@@ -53,15 +55,18 @@ export class LogView extends HTMLElement
 
 	private wordWrapLines(loglines: string[]): string[]
 	{
-		const wordBreakThreshold = 15;
 		const maxCharsPerLine = Math.floor(this.scrollContainerWidth / this.charWidth);
-		
-		const wrappedLines = loglines.flatMap(l => {
-			if (l.length <= maxCharsPerLine)
-				return l;
+		const wrappedLines = [] as string[];
 
-			return [l.slice(0, Math.floor(l.length / 2)), l.slice(Math.floor(l.length / 2))];
-		});
+		for (let line of loglines)
+		{
+			if (line.length <= maxCharsPerLine)
+				wrappedLines.push(line);
+
+			wrappedLines.push(
+				...wordWrap(line, { width: maxCharsPerLine, newline: "\n" }).split("\n")
+			);
+		}
 
 		return wrappedLines;
 	}
