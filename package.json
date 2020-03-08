@@ -4,8 +4,8 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-	"test": "echo \"Error: no test specified\" && exit 1",
-	"build": "node node_modules/typescript/bin/tsc -p tsconfig.json"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "node node_modules/typescript/bin/tsc -p tsconfig.json"
   },
   "repository": {
     "type": "git",

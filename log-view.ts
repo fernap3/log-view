@@ -1,5 +1,3 @@
-import { wrap as wordWrap } from "./word-wrap/index.js";
-
 export class LogView extends HTMLElement
 {
 	private readonly LINE_HEIGHT = 20;
