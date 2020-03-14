@@ -1,11 +1,10 @@
 import { LogView } from "./log-view.js";
 import { AuditResultsList as AuditResultsList } from "./audit-results-list.js";
-import { AuditResult, Audit, Line, LineWithTimeStamp } from "./audit.js";
+import { AuditResult, runAudits } from "./audit.js";
 import { AuditDetailsView } from "./audit-details.js";
 
 let dirHandle: FileSystemDirectoryHandle;
 const fileListEntries = [] as FileSystemHandle[];
-const audits = [] as Audit[];
 
 const patternInput = document.getElementById("filename-pattern") as HTMLInputElement;
 patternInput.onchange = () => renderFileList();
@@ -97,75 +96,5 @@ async function renderFileContents(entry = selectedFileHandle)
 	}
 	auditResultsList.results = auditResults;
 }
-
-function runAudits(text: string)
-{
-	// MOVE THIS TO A WORKER!!
-	const linePrefixPattern = /\d{1,4}-\d{1,2}-\d{1,2}\s+\d{1,2}:\d{1,2}:\d{1,2},\d{3}/;
-	const timeStampPattern = /\d{1,4}-\d{1,2}-\d{1,2}\s+\d{1,2}:\d{1,2}:\d{1,2},\d{3}/;
-	const regex = new RegExp(linePrefixPattern, "g");
-
-	const matches = [];
-	let match;
-	while (match = regex.exec(text))
-		matches.push(match);
-
-	const logMessages = [] as LineWithTimeStamp[];
-	for (let matchNum = 0; matchNum < matches.length; matchNum++)
-	{
-		const lineStart = matches[matchNum].index;
-		const lineEnd = matches[matchNum + 1]?.index ?? text.length;
-		const lineText = text.substring(lineStart, lineEnd);
-		const timeStamp = lineText.match(timeStampPattern)?.[0];
-
-		logMessages.push( { text: lineText, num: matchNum, start: lineStart, end: lineEnd, timeStamp });
-	}
-
-	let results = [] as AuditResult[];
-	for (let audit of audits)
-	{
-		const auditPluginResult = audit.fn(logMessages).map(r => ({...r, auditName: audit.name})) as AuditResult[];
-		results.push(...auditPluginResult);
-	}
-
-	return results;
-}
-
-audits.push(
-	{
-		name: "Errors",
-		fn: logMessages =>
-		{
-			const results = [];
-			for (let line of logMessages)
-			{
-				if (/\sERROR/.test(line.text))
-				{
-					const errorTextPreview = /\[.+\]\s+(.*)$/m.exec(line.text)?.[1] ?? "Couldn't find error text";
-					results.push({ text: errorTextPreview, messageNum: line.num, timeStamp: line.timeStamp });
-				}
-			}
-
-			return results;
-		}
-	},
-	{
-		name: "SQL Statements",
-		fn: logMessages =>
-		{
-			const results = [];
-			for (let line of logMessages)
-			{
-				if (/SQL Stmt:/.test(line.text))
-				{
-					const errorTextPreview = "SQL query executed";
-					results.push({ text: errorTextPreview, messageNum: line.num, timeStamp: line.timeStamp });
-				}
-			}
-
-			return results;
-		}
-	}
-);
 
 onPageLoad();
