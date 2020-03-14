@@ -84,7 +84,7 @@ export const audits = [
 ] as Audit[];
 
 
-export function runAudits(text: string)
+export async function *runAudits(text: string)
 {
 	// MOVE THIS TO A WORKER!!
 	const linePrefixPattern = /\d{1,4}-\d{1,2}-\d{1,2}\s+\d{1,2}:\d{1,2}:\d{1,2},\d{3}/;
@@ -112,12 +112,10 @@ export function runAudits(text: string)
 	{
 		for (let result of audit.doAudit(logMessages))
 		{
-			results.push({
+			yield {
 				...result,
 				auditName: audit.name
-			});
+			};
 		}
 	}
-
-	return results;
 }

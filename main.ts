@@ -88,13 +88,17 @@ async function renderFileContents(entry = selectedFileHandle)
 	logView.value = fileText;
 	logView.scrollTop = 0;
 
-	const auditResults = runAudits(fileText);
 	auditResultsList.onEntrySelect = (result: AuditResult, messageNum: number) => {
 		logView.scrollToMessage(messageNum);
 
 		const audit = audits.find(a => a.name === result.auditName)!;
 		audit.renderAuditDetails(result, auditDetailsContainer);
 	}
+
+	const auditResults = [];
+	for await (let result of runAudits(fileText))
+		auditResults.push(result);
+
 	auditResultsList.results = auditResults;
 }
 
