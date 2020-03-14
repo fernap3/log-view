@@ -35,7 +35,7 @@
 				grid-column: 1 / span 2;
 				margin: 0;
 			}
-			#audits {
+			audit-results-list {
 				flex-basis: 700px;
 				min-width: 500px;
 				border: 1px solid darkgrey;
@@ -43,11 +43,11 @@
 				overflow: auto;
 				box-sizing: border-box;
 			}
-			li {
+			#file-list li {
 				cursor: pointer;
 				user-select: none;
 			}
-			li[data-selected] {
+			#file-list li[data-selected] {
 				background: lightgray;
 			}
 			log-view {
@@ -78,9 +78,7 @@
 				<button id="open-button" type="button"></button>
 			</div>
 			<log-view id="file-display"></log-view>
-			<div id="audits">
-				<div class="pane-title">Audits</div>
-			</div>
+			<audit-results-list></audit-results-list>
 		</div>
 	</body>
 </html>

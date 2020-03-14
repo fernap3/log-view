@@ -1,9 +1,24 @@
-export interface Audit {
-	name: string;
-	fn: (lines: { text: string, num: number }[]) => AuditResult[];
+export interface Line {
+	text: string;
+	num: number;
+	start: number;
+	end: number;
 }
 
-export interface AuditResult {
+export interface LineWithTimeStamp extends Line {
+	timeStamp?: string;
+}
+
+export interface Audit {
+	name: string;
+	fn: (lines: LineWithTimeStamp[]) => AuditPluginResult[];
+}
+
+export interface AuditPluginResult {
 	text: string;
 	messageNum: number;
+}
+
+export interface AuditResult extends AuditPluginResult {
+	timeStamp?: string;
 }

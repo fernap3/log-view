@@ -1,6 +1,6 @@
 import { LogView } from "./log-view.js";
 import { AuditResultsList as AuditResultsList } from "./audit-results-list.js";
-import { AuditResult, Audit } from "./audit.js";
+import { AuditResult, Audit, Line, LineWithTimeStamp } from "./audit.js";
 
 let dirHandle: FileSystemDirectoryHandle;
 const fileListEntries = [] as FileSystemHandle[];
@@ -45,8 +45,7 @@ async function onPageLoad()
 
 	logView.messageStartPattern = /\d{1,4}-\d{1,2}-\d{1,2}\s+\d{1,2}:\d{1,2}:\d{1,2},\d{3}/; // timestamp
 
-	const auditsPane = document.getElementById("audits") as HTMLElement;
-	auditResultsList = new AuditResultsList(auditsPane);
+	auditResultsList = document.querySelector("audit-results-list") as AuditResultsList;
 }
 
 function renderFileList()
@@ -97,6 +96,7 @@ function runAudits(text: string)
 {
 	// MOVE THIS TO A WORKER!!
 	const linePrefixPattern = /\d{1,4}-\d{1,2}-\d{1,2}\s+\d{1,2}:\d{1,2}:\d{1,2},\d{3}/;
+	const timeStampPattern = /\d{1,4}-\d{1,2}-\d{1,2}\s+\d{1,2}:\d{1,2}:\d{1,2},\d{3}/;
 	const regex = new RegExp(linePrefixPattern, "g");
 
 	const matches = [];
@@ -104,22 +104,23 @@ function runAudits(text: string)
 	while (match = regex.exec(text))
 		matches.push(match);
 
-	const logMessages = [] as Line[];
+	const logMessages = [] as LineWithTimeStamp[];
 	for (let matchNum = 0; matchNum < matches.length; matchNum++)
 	{
 		const lineStart = matches[matchNum].index;
 		const lineEnd = matches[matchNum + 1]?.index ?? text.length;
 		const lineText = text.substring(lineStart, lineEnd);
+		const timeStamp = lineText.match(timeStampPattern)?.[0];
 
-		logMessages.push( { text: lineText, num: matchNum, start: lineStart, end: lineEnd });
+		logMessages.push( { text: lineText, num: matchNum, start: lineStart, end: lineEnd, timeStamp });
 	}
 
 	let results = {} as { [auditName: string]: AuditResult[] };
 	for (let audit of audits)
 	{
-		const r = audit.fn(logMessages);
-		if (r.length)
-			results[audit.name] = r;
+		const auditPluginResult = audit.fn(logMessages);
+		if (auditPluginResult.length)
+			results[audit.name] = auditPluginResult;
 	}
 
 	return results;
@@ -136,7 +137,7 @@ audits.push(
 				if (/\sERROR/.test(line.text))
 				{
 					const errorTextPreview = /\[.+\]\s+(.*)$/m.exec(line.text)?.[1] ?? "Couldn't find error text";
-					results.push({ text: errorTextPreview, messageNum: line.num });
+					results.push({ text: errorTextPreview, messageNum: line.num, timeStamp: line.timeStamp });
 				}
 			}
 
@@ -153,7 +154,7 @@ audits.push(
 				if (/SQL Stmt:/.test(line.text))
 				{
 					const errorTextPreview = "SQL query executed";
-					results.push({ text: errorTextPreview, messageNum: line.num });
+					results.push({ text: errorTextPreview, messageNum: line.num, timeStamp: line.timeStamp });
 				}
 			}
 
@@ -163,10 +164,3 @@ audits.push(
 );
 
 onPageLoad();
-
-interface Line {
-	text: string;
-	num: number;
-	start: number;
-	end: number;
-}
