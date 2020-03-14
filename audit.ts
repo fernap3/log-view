@@ -107,7 +107,6 @@ export async function *runAudits(text: string)
 		logMessages.push( { text: lineText, num: matchNum, start: lineStart, end: lineEnd, timeStamp });
 	}
 
-	let results = [] as AuditResult[];
 	for (let audit of audits)
 	{
 		for (let result of audit.doAudit(logMessages))
