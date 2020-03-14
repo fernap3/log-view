@@ -11,7 +11,8 @@ interface LineWithTimeStamp extends Line {
 
 interface Audit {
 	name: string;
-	doAudit: (lines: LineWithTimeStamp[]) => AuditPluginResult[];
+	doAudit(lines: LineWithTimeStamp[]): IterableIterator<AuditPluginResult>;
+	// renderAuditDetails(result: AuditResult, container: HTMLElement): void;
 }
 
 interface AuditPluginResult {
@@ -28,19 +29,21 @@ class ErrorAudit implements Audit
 {
 	public get name() { return "Errors"; }
 
-	public doAudit(logMessages: LineWithTimeStamp[]): AuditPluginResult[]
+	public *doAudit(logMessages: LineWithTimeStamp[]): IterableIterator<AuditPluginResult>
 	{
-		const results = [];
 		for (let line of logMessages)
 		{
 			if (/\sERROR/.test(line.text))
 			{
 				const errorTextPreview = /\[.+\]\s+(.*)$/m.exec(line.text)?.[1] ?? "Couldn't find error text";
-				results.push({ text: errorTextPreview, messageNum: line.num, timeStamp: line.timeStamp });
+				yield {
+					text: errorTextPreview,
+					messageNum: line.num,
+					timeStamp: line.timeStamp
+				};
+
 			}
 		}
-
-		return results;
 	}
 }
 
@@ -48,19 +51,20 @@ class SqlQueryAudit implements Audit
 {
 	public get name() { return "SQL Statements"; }
 
-	public doAudit(logMessages: LineWithTimeStamp[]): AuditPluginResult[]
+	public *doAudit(logMessages: LineWithTimeStamp[]): IterableIterator<AuditPluginResult>
 	{
-		const results = [];
 		for (let line of logMessages)
 		{
 			if (/SQL Stmt:/.test(line.text))
 			{
 				const errorTextPreview = "SQL query executed";
-				results.push({ text: errorTextPreview, messageNum: line.num, timeStamp: line.timeStamp });
+				yield {
+					text: errorTextPreview,
+					messageNum: line.num,
+					timeStamp: line.timeStamp
+				};
 			}
 		}
-
-		return results;
 	}
 }
 
@@ -96,8 +100,13 @@ export function runAudits(text: string)
 	let results = [] as AuditResult[];
 	for (let audit of audits)
 	{
-		const auditPluginResult = audit.doAudit(logMessages).map(r => ({...r, auditName: audit.name})) as AuditResult[];
-		results.push(...auditPluginResult);
+		for (let result of audit.doAudit(logMessages))
+		{
+			results.push({
+				...result,
+				auditName: audit.name
+			});
+		}
 	}
 
 	return results;
