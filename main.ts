@@ -88,8 +88,8 @@ async function renderFileContents(entry = selectedFileHandle)
 	logView.scrollTop = 0;
 
 	const auditResults = runAudits(fileText);
-	auditResultsList.onEntryClick = (messageNum: number) => logView.scrollToMessage(messageNum);
-	auditResultsList.render(auditResults);
+	auditResultsList.onEntrySelect = (messageNum: number) => logView.scrollToMessage(messageNum);
+	auditResultsList.results = auditResults;
 }
 
 function runAudits(text: string)

@@ -2,7 +2,8 @@ import { AuditResult } from "./audit.js";
 
 export class AuditResultsList extends HTMLElement
 {
-	public onEntryClick?: (messageNum: number) => void;
+	public onEntrySelect?: (messageNum: number) => void;
+
 	private shadow: ShadowRoot;
 	private renderContainer: HTMLElement;
 	private auditResults!: AuditResult[];
@@ -10,6 +11,7 @@ export class AuditResultsList extends HTMLElement
 	private hasRenderedOnce = false;
 	private table?: HTMLTableElement;
 	private headers?: { auditResultPropertyName: keyof AuditResult, element: HTMLTableHeaderCellElement }[];
+	private selectedResult?: AuditResult;
 
 	constructor()
 	{
@@ -30,10 +32,6 @@ export class AuditResultsList extends HTMLElement
 				position: relative;
 			}
 
-			tr:first-child th:hover {
-				background: #eae7e7;
-			}
-
 			th {
 				background: #f5f5f5;
 				cursor: pointer;
@@ -43,6 +41,22 @@ export class AuditResultsList extends HTMLElement
 				padding: 0.4em .5em;
 				position: sticky;
 				top: 0;
+			}
+
+			tr {
+				cursor: pointer;
+			}
+
+			th:hover {
+				background: #eae7e7;
+			}
+
+			tr:hover:not([data-selected]) {
+				background: #f3f3f3;
+			}
+
+			tr[data-selected] {
+				background: #d3edff;
 			}
 
 			th[data-sort]::after {
@@ -79,11 +93,15 @@ export class AuditResultsList extends HTMLElement
 		this.renderContainer = document.createElement("div");
 		this.shadow.appendChild(this.renderContainer);
 	}
-	
-	public render(results: AuditResult[])
+
+	public set results(results: AuditResult[])
 	{
 		this.auditResults = results;
-
+		this.render();
+	}
+	
+	private render()
+	{
 		if (this.hasRenderedOnce)
 		{
 			// If the table has already rendered, just remove all the data rows and lead the header row
@@ -131,15 +149,26 @@ export class AuditResultsList extends HTMLElement
 		const sortHeader = this.headers!.find(h => h.auditResultPropertyName === this.currentSort.propertyName)?.element;
 		sortHeader?.setAttribute("data-sort", this.currentSort.desc ? "desc" : "asc");
 
-		for (let result of results)
+		for (let result of this.auditResults)
 		{			
 			const row = document.createElement("tr");
-			row.innerHTML = `<td>${result.timeStamp ?? ""}</td><td>${result.auditName}</td><td>${result.text}</td>`;
-			row.onclick = () => this.onEntryClick?.(result.messageNum);
 			this.table!.appendChild(row);
+			row.innerHTML = `<td>${result.timeStamp ?? ""}</td><td>${result.auditName}</td><td>${result.text}</td>`;
+			row.onclick = () => this.onEntryClick(result);
+
+			if (this.selectedResult === result)
+				row.setAttribute("data-selected", "");
 		}
 
 		this.hasRenderedOnce = true;
+	}
+
+	private onEntryClick(auditResult: AuditResult)
+	{
+		this.selectedResult = auditResult;
+		this.render();
+		
+		this.onEntrySelect?.(auditResult.messageNum);
 	}
 
 	private onHeaderClick(auditPropertyName: keyof AuditResult, dataType: "date" | "text")
@@ -148,7 +177,7 @@ export class AuditResultsList extends HTMLElement
 		this.currentSort = { propertyName: auditPropertyName, desc };
 		
 		this.sortAuditResults(auditPropertyName, dataType, desc);
-		this.render(this.auditResults);
+		this.render();
 	}
 
 	private sortAuditResults(propertyName: keyof AuditResult, dataType: "date" | "text", desc: boolean)
