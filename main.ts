@@ -1,7 +1,6 @@
 import { LogView } from "./log-view.js";
 import { AuditResultsList as AuditResultsList } from "./audit-results-list.js";
-import { AuditResult, runAudits } from "./audit.js";
-import { AuditDetailsView } from "./audit-details.js";
+import { AuditResult, runAudits, audits } from "./audit.js";
 
 let dirHandle: FileSystemDirectoryHandle;
 const fileListEntries = [] as FileSystemHandle[];
@@ -12,7 +11,7 @@ patternInput.onchange = () => renderFileList();
 let selectedFileHandle: FileSystemHandle;
 let logView: LogView;
 let auditResultsList: AuditResultsList;
-let auditResultView: AuditDetailsView;
+let auditDetailsContainer: HTMLElement;
 
 async function onPageLoad()
 {
@@ -47,7 +46,7 @@ async function onPageLoad()
 	logView.messageStartPattern = /\d{1,4}-\d{1,2}-\d{1,2}\s+\d{1,2}:\d{1,2}:\d{1,2},\d{3}/; // timestamp
 
 	auditResultsList = document.querySelector("audit-results-list") as AuditResultsList;
-	auditResultView = document.querySelector("audit-result") as AuditDetailsView;
+	auditDetailsContainer = document.getElementById("audit-details") as HTMLElement;
 }
 
 function renderFileList()
@@ -92,7 +91,9 @@ async function renderFileContents(entry = selectedFileHandle)
 	const auditResults = runAudits(fileText);
 	auditResultsList.onEntrySelect = (result: AuditResult, messageNum: number) => {
 		logView.scrollToMessage(messageNum);
-		auditResultView.value = result;
+
+		const audit = audits.find(a => a.name === result.auditName)!;
+		audit.renderAuditDetails(result, auditDetailsContainer);
 	}
 	auditResultsList.results = auditResults;
 }

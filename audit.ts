@@ -12,7 +12,7 @@ interface LineWithTimeStamp extends Line {
 interface Audit {
 	name: string;
 	doAudit(lines: LineWithTimeStamp[]): IterableIterator<AuditPluginResult>;
-	// renderAuditDetails(result: AuditResult, container: HTMLElement): void;
+	renderAuditDetails(result: AuditResult, container: HTMLElement): void;
 }
 
 interface AuditPluginResult {
@@ -45,6 +45,11 @@ class ErrorAudit implements Audit
 			}
 		}
 	}
+
+	public renderAuditDetails(result: AuditResult, container: HTMLElement): void
+	{
+		container.innerHTML = result.text;
+	}
 }
 
 class SqlQueryAudit implements Audit
@@ -66,9 +71,14 @@ class SqlQueryAudit implements Audit
 			}
 		}
 	}
+
+	public renderAuditDetails(result: AuditResult, container: HTMLElement): void
+	{
+		container.innerHTML = result.text;
+	}
 }
 
-const audits = [
+export const audits = [
 	new ErrorAudit(),
 	new SqlQueryAudit(),
 ] as Audit[];
