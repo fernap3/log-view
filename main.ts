@@ -115,12 +115,11 @@ function runAudits(text: string)
 		logMessages.push( { text: lineText, num: matchNum, start: lineStart, end: lineEnd, timeStamp });
 	}
 
-	let results = {} as { [auditName: string]: AuditResult[] };
+	let results = [] as AuditResult[];
 	for (let audit of audits)
 	{
-		const auditPluginResult = audit.fn(logMessages);
-		if (auditPluginResult.length)
-			results[audit.name] = auditPluginResult;
+		const auditPluginResult = audit.fn(logMessages).map(r => ({...r, auditName: audit.name})) as AuditResult[];
+		results.push(...auditPluginResult);
 	}
 
 	return results;

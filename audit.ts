@@ -20,5 +20,6 @@ export interface AuditPluginResult {
 }
 
 export interface AuditResult extends AuditPluginResult {
+	auditName: string;
 	timeStamp?: string;
 }

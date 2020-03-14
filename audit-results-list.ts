@@ -5,6 +5,7 @@ export class AuditResultsList extends HTMLElement
 	public onEntryClick?: (messageNum: number) => void;
 	private shadow: ShadowRoot;
 	private renderContainer: HTMLElement;
+	private auditResults?: AuditResult[];
 
 	constructor()
 	{
@@ -22,12 +23,7 @@ export class AuditResultsList extends HTMLElement
 				font-size: 14px;
 				width: 100%;
 				table-layout: fixed;
-			}
-
-			tr:first-child {
-				background: #f5f5f5;
-				cursor: pointer;
-				user-select: none;
+				position: relative;
 			}
 
 			tr:first-child th:hover {
@@ -35,9 +31,14 @@ export class AuditResultsList extends HTMLElement
 			}
 
 			th {
+				background: #f5f5f5;
+				cursor: pointer;
+				user-select: none;
 				font-weight: normal;
 				text-align: left;
 				padding: 0.4em .5em;
+				position: sticky;
+				top: 0;
 			}
 
 			th:hover {
@@ -55,22 +56,20 @@ export class AuditResultsList extends HTMLElement
 		this.shadow.appendChild(this.renderContainer);
 	}
 	
-	public render(results: { [auditName: string]: AuditResult[] })
+	public render(results: AuditResult[])
 	{
+		this.auditResults = results;
 		this.renderContainer.innerHTML = "";
 
 		const table = document.createElement("table");
 		table.innerHTML += `<tr><th>Time</th><th>Type</th><th>Summary</th></tr>`;
 
-		for (let auditName in results)
+		for (let result of results)
 		{			
-			for (let result of results[auditName])
-			{
-				const row = document.createElement("tr");
-				row.innerHTML = `<td>${result.timeStamp ?? ""}</td><td>${auditName}</td><td>${result.text}</td>`;
-				row.onclick = () => this.onEntryClick?.(result.messageNum);
-				table.appendChild(row);
-			}
+			const row = document.createElement("tr");
+			row.innerHTML = `<td>${result.timeStamp ?? ""}</td><td>${result.auditName}</td><td>${result.text}</td>`;
+			row.onclick = () => this.onEntryClick?.(result.messageNum);
+			table.appendChild(row);
 		}
 
 		this.renderContainer.appendChild(table);
