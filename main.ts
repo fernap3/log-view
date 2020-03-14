@@ -1,4 +1,6 @@
 import { LogView } from "./log-view.js";
+import { AuditResultsList as AuditResultsList } from "./audit-results-list.js";
+import { AuditResult, Audit } from "./audit.js";
 
 let dirHandle: FileSystemDirectoryHandle;
 const fileListEntries = [] as FileSystemHandle[];
@@ -7,11 +9,9 @@ const audits = [] as Audit[];
 const patternInput = document.getElementById("filename-pattern") as HTMLInputElement;
 patternInput.onchange = () => renderFileList();
 
-const linePrefixInput = document.getElementById("line-prefix-pattern") as HTMLInputElement;
-linePrefixInput.onchange = () => renderFileContents();
-
 let selectedFileHandle: FileSystemHandle;
 let logView: LogView;
+let auditResultsList: AuditResultsList;
 
 async function onPageLoad()
 {
@@ -44,6 +44,9 @@ async function onPageLoad()
 	};
 
 	logView.messageStartPattern = /\d{1,4}-\d{1,2}-\d{1,2}\s+\d{1,2}:\d{1,2}:\d{1,2},\d{3}/; // timestamp
+
+	const auditsPane = document.getElementById("audits") as HTMLElement;
+	auditResultsList = new AuditResultsList(auditsPane);
 }
 
 function renderFileList()
@@ -86,14 +89,14 @@ async function renderFileContents(entry = selectedFileHandle)
 	logView.scrollTop = 0;
 
 	const auditResults = runAudits(fileText);
-	renderAudits(auditResults);
+	auditResultsList.onEntryClick = (messageNum: number) => logView.scrollToMessage(messageNum);
+	auditResultsList.render(auditResults);
 }
 
 function runAudits(text: string)
 {
 	// MOVE THIS TO A WORKER!!
-	console.time("audits")
-	const linePrefixPattern = linePrefixInput.value;
+	const linePrefixPattern = /\d{1,4}-\d{1,2}-\d{1,2}\s+\d{1,2}:\d{1,2}:\d{1,2},\d{3}/;
 	const regex = new RegExp(linePrefixPattern, "g");
 
 	const matches = [];
@@ -119,35 +122,7 @@ function runAudits(text: string)
 			results[audit.name] = r;
 	}
 
-	console.timeEnd("audits")
-
 	return results;
-}
-
-function renderAudits(results: { [auditName: string]: AuditResult[] })
-{
-	const auditsPane = document.getElementById("audits") as HTMLElement;
-	auditsPane.innerHTML = "";
-
-	const list = document.createElement("ul");
-	auditsPane.appendChild(list);
-
-	for (let auditName in results)
-	{
-		const auditListTitle = document.createElement("li");
-		auditListTitle.textContent = auditName;
-		list.appendChild(auditListTitle);
-		const sublist = document.createElement("ul");
-		list.appendChild(sublist);
-		for (let result of results[auditName])
-		{
-			const li = document.createElement("li");
-			sublist.appendChild(li);
-			li.textContent = result.text;
-
-			li.onclick = () => logView.scrollToMessage(result.messageNum);
-		}
-	}
 }
 
 audits.push(
@@ -188,16 +163,6 @@ audits.push(
 );
 
 onPageLoad();
-
-interface Audit {
-	name: string;
-	fn: (lines: { text: string, num: number }[]) => AuditResult[];
-}
-
-interface AuditResult {
-	text: string;
-	messageNum: number;
-}
 
 interface Line {
 	text: string;
