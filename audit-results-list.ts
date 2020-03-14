@@ -2,7 +2,7 @@ import { AuditResult } from "./audit.js";
 
 export class AuditResultsList extends HTMLElement
 {
-	public onEntrySelect?: (messageNum: number) => void;
+	public onEntrySelect?: (result: AuditResult, messageNum: number) => void;
 
 	private shadow: ShadowRoot;
 	private renderContainer: HTMLElement;
@@ -168,7 +168,7 @@ export class AuditResultsList extends HTMLElement
 		this.selectedResult = auditResult;
 		this.render();
 		
-		this.onEntrySelect?.(auditResult.messageNum);
+		this.onEntrySelect?.(this.selectedResult, auditResult.messageNum);
 	}
 
 	private onHeaderClick(auditPropertyName: keyof AuditResult, dataType: "date" | "text")
