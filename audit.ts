@@ -70,7 +70,7 @@ class ErrorAudit implements Audit<ErrorAuditRenderDataType>
 	}
 }
 
-type SqlQueryAuditRenderDataType = string;
+type SqlQueryAuditRenderDataType = { query: string, numRows?: number };
 class SqlQueryAudit implements Audit<SqlQueryAuditRenderDataType>
 {
 	public get name() { return "SQL Statement"; }
@@ -78,20 +78,60 @@ class SqlQueryAudit implements Audit<SqlQueryAuditRenderDataType>
 
 	public *doAudit(logMessages: LineWithTimeStamp[]): IterableIterator<AuditPluginResult<SqlQueryAuditRenderDataType>>
 	{
-		for (let line of logMessages)
+		
+		for (let i = 0; i < logMessages.length; i++)
 		{
-			if (/SQL Stmt:/.test(line.text))
+			const message = logMessages[i];
+			
+			if (/SQL Stmt:/.test(message.text))
 			{
-				const sqlQuery = /\[.+\]\s+SQL Stmt: (.*)/m.exec(line.text)?.[1] ?? "Couldn't find SQL query text";
+				const matches = /[^\[]\[([^\]]+)\]\[([^\]]+)\].+SQL Stmt: (.*)/m.exec(message.text);
+				let numRows: number | undefined;
+
+				const reportId = matches?.[1];
+				const sessionId = matches?.[2];
+
+				if (reportId && sessionId)
+				{
+					// Go find the log message that says how many rows were returned (if it exists).
+					// We pass in the report ID and session ID logged in the SQL query message and
+					// only look for a corresponding row count message where those two IDs match.
+					numRows = this.findQueryRowsReturned(logMessages, reportId, sessionId, i + 1);
+				}
+
+				const query = matches?.[3] ?? "Couldn't find SQL query text";
 				yield {
-					summary: sqlQuery,
-					messageNum: line.num,
-					timeStamp: line.timeStamp,
-					renderData: sqlQuery,
+					summary: query,
+					messageNum: message.num,
+					timeStamp: message.timeStamp,
+					renderData: { query, numRows },
 					resultLevel: { level: "info" }
 				};
 			}
 		}
+	}
+
+	private findQueryRowsReturned(messages: LineWithTimeStamp[], reportId: string, sessionId: string, start: number): number | undefined
+	{
+		const numRowsRegex = /SQL Stmt rows returned:\s*(\d{1,10})/m;
+		const idsRegex = new RegExp(`\\[${reportId}\\]\\s*\\[${sessionId}\\]`);
+
+		for (let i = start; i < messages.length; i++)
+		{
+			const message = messages[i];
+
+			if (idsRegex.test(message.text))
+			{
+				// The report ID and session ID from the log message match, so we are probably dealing with
+				// the corresponding row count output for the given query
+				const numRowsMatches = numRowsRegex.exec(message.text);
+
+				if (numRowsMatches?.[1])
+					return parseInt(numRowsMatches?.[1]);
+			}
+		}
+
+		return undefined;
 	}
 
 	public async renderAuditDetails(result: AuditResult<SqlQueryAuditRenderDataType>, container: HTMLElement)
@@ -99,12 +139,30 @@ class SqlQueryAudit implements Audit<SqlQueryAuditRenderDataType>
 		await import("./prism.js" as any);
 		await import("./node_modules/sql-formatter/dist/sql-formatter.js" as any);
 
-		const formattedSql = sqlFormatter.format(result.renderData);
 
+		const panelContainer = document.createElement("div");
+		container.appendChild(panelContainer);
+		panelContainer.style.display = "flex";
+		panelContainer.style.height = "100%";
+
+		const infoContainer = document.createElement("div");
+		panelContainer.appendChild(infoContainer);
+		infoContainer.style.flexBasis = "600px";
+		infoContainer.innerHTML = `
+			<p>A SQL query was executed at ${result.timeStamp ?? "(unknown time)"}</p>
+			<p>The query returned ${result.renderData.numRows ?? "an unknown number of"} rows</p>
+		`;
+
+		const formattedSql = sqlFormatter.format(result.renderData.query);
 		const codeContainer = document.createElement("pre");
-		container.appendChild(codeContainer);
+		panelContainer.appendChild(codeContainer);
 		codeContainer.innerHTML = formattedSql;
 		codeContainer.className = "language-sql";
+		codeContainer.style.flexGrow = "1";
+		codeContainer.style.overflow = "auto";
+		codeContainer.style.height = "100%";
+		codeContainer.style.boxSizing = "border-box";
+
 		Prism.highlightElement(codeContainer);
 	}
 }
