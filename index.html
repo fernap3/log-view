@@ -88,6 +88,11 @@
 				background-color: transparent;
 				cursor: pointer;
 			}
+			#footer {
+				grid-column: 1 / span 3;
+				text-align: right;
+				font-size: 12px;
+			}
 		</style>
 		<script src="main.js" type="module"></script>
 	</head>	
@@ -101,7 +106,7 @@
 			<log-view id="file-display"></log-view>
 			<audit-results-list></audit-results-list>
 			<div id="audit-details"></div>
-			Liking the tool? Submit feature requests and bug reports on the GitHub page.
+			<div id="footer">Liking the tool? Submit feature requests and bug reports at the <a href="https://github.com/fernap3/log-view" target="_blank" >GitHub repo</a>.</div>
 		</div>
 	</body>
 </html>
