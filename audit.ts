@@ -1,3 +1,5 @@
+declare var Prism: typeof import("prismjs");
+
 interface Line {
 	text: string;
 	num: number;
@@ -12,7 +14,7 @@ interface LineWithTimeStamp extends Line {
 interface Audit<T> {
 	name: string;
 	doAudit(lines: LineWithTimeStamp[]): IterableIterator<AuditPluginResult<T>>;
-	renderAuditDetails(result: AuditResult<T>, container: HTMLElement): void;
+	renderAuditDetails(result: AuditResult<T>, container: HTMLElement): Promise<void>;
 }
 
 interface AuditPluginResult<T> {
@@ -49,7 +51,7 @@ class ErrorAudit implements Audit<ErrorAuditRenderDataType>
 		}
 	}
 
-	public renderAuditDetails(result: AuditResult<ErrorAuditRenderDataType>, container: HTMLElement): void
+	public async renderAuditDetails(result: AuditResult<ErrorAuditRenderDataType>, container: HTMLElement)
 	{
 		const pre = document.createElement("pre");
 		container.appendChild(pre);
@@ -79,9 +81,15 @@ class SqlQueryAudit implements Audit<SqlQueryAuditRenderDataType>
 		}
 	}
 
-	public renderAuditDetails(result: AuditResult<SqlQueryAuditRenderDataType>, container: HTMLElement): void
+	public async renderAuditDetails(result: AuditResult<SqlQueryAuditRenderDataType>, container: HTMLElement)
 	{
-		container.innerHTML = result.renderData;
+		await import("./prism.js" as any);
+
+		const codeContainer = document.createElement("pre");
+		container.appendChild(codeContainer);
+		codeContainer.innerHTML = result.renderData;
+		codeContainer.className = "language-sql";
+		Prism.highlightElement(codeContainer);
 	}
 }
 
