@@ -19,7 +19,9 @@
   "homepage": "https://github.com/fernap3/logtool#readme",
   "dependencies": {
     "@types/prismjs": "^1.16.0",
+    "@types/sql-formatter": "^2.3.0",
     "prismjs": "^1.19.0",
+    "sql-formatter": "^2.3.3",
     "typescript": "^3.8.3"
   }
 }

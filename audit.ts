@@ -1,4 +1,5 @@
 declare var Prism: typeof import("prismjs");
+declare var sqlFormatter: typeof import("sql-formatter").default;
 
 interface Line {
 	text: string;
@@ -87,10 +88,13 @@ class SqlQueryAudit implements Audit<SqlQueryAuditRenderDataType>
 	public async renderAuditDetails(result: AuditResult<SqlQueryAuditRenderDataType>, container: HTMLElement)
 	{
 		await import("./prism.js" as any);
+		await import("./node_modules/sql-formatter/dist/sql-formatter.js" as any);
+
+		const formattedSql = sqlFormatter.format(result.renderData);
 
 		const codeContainer = document.createElement("pre");
 		container.appendChild(codeContainer);
-		codeContainer.innerHTML = result.renderData;
+		codeContainer.innerHTML = formattedSql;
 		codeContainer.className = "language-sql";
 		Prism.highlightElement(codeContainer);
 	}
