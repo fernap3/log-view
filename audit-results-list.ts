@@ -188,7 +188,7 @@ export class AuditResultsList extends HTMLElement
 			if (result.resultLevel.level !== "info")
 			{
 				const levelIconUrl = result.resultLevel.level === "warning" ? "warning.svg" : result.resultLevel.level === "severe" ? "severe.svg" : null;
-				levelIconHtml = `<img src="${levelIconUrl}" class="result-level-icon">`;
+				levelIconHtml = `<img src="${levelIconUrl}" title="${result.resultLevel.reason ?? ""}" class="result-level-icon">`;
 			}
 
 			row.innerHTML = `<td class="level-indicator-cell">${levelIconHtml}</td><td class="timestamp-cell">${result.timeStamp ?? ""}</td><td class="audit-name-cell">${result.auditName}</td><td class="summary-cell">${result.summary}</td>`;

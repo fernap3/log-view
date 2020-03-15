@@ -76,6 +76,8 @@ class SqlQueryAudit implements Audit<SqlQueryAuditRenderDataType>
 	public get name() { return "SQL Statement"; }
 	public get cssIncludes() { return ["prism.css"] };
 
+	private static readonly NUM_ROWS_WARNING_THRESHOLD = 500_000;
+
 	public *doAudit(logMessages: LineWithTimeStamp[]): IterableIterator<AuditPluginResult<SqlQueryAuditRenderDataType>>
 	{
 		
@@ -98,6 +100,8 @@ class SqlQueryAudit implements Audit<SqlQueryAuditRenderDataType>
 					// only look for a corresponding row count message where those two IDs match.
 					numRows = this.findQueryRowsReturned(logMessages, reportId, sessionId, i + 1);
 				}
+				
+				const largeNumberOfRowsReturned = (numRows ?? 0) > SqlQueryAudit.NUM_ROWS_WARNING_THRESHOLD;
 
 				const query = matches?.[3] ?? "Couldn't find SQL query text";
 				yield {
@@ -105,7 +109,12 @@ class SqlQueryAudit implements Audit<SqlQueryAuditRenderDataType>
 					messageNum: message.num,
 					timeStamp: message.timeStamp,
 					renderData: { query, numRows },
-					resultLevel: { level: "info" }
+					resultLevel: largeNumberOfRowsReturned ? {
+							level: "warning",
+							reason: `This query returned ${numRows} records`,
+						} : {
+							level: "info",
+						}
 				};
 			}
 		}
@@ -148,10 +157,27 @@ class SqlQueryAudit implements Audit<SqlQueryAuditRenderDataType>
 		const infoContainer = document.createElement("div");
 		panelContainer.appendChild(infoContainer);
 		infoContainer.style.flexBasis = "600px";
-		infoContainer.innerHTML = `
-			<p>A SQL query was executed at ${result.timeStamp ?? "(unknown time)"}</p>
-			<p>The query returned ${result.renderData.numRows ?? "an unknown number of"} rows</p>
-		`;
+
+		const numRowsFormat = Intl.NumberFormat("en-us", { useGrouping: true });
+		const formattedNumRows = result.renderData.numRows ? numRowsFormat.format(result.renderData.numRows) : "an unknown number of";
+		
+		const largeNumberOfRowsReturned = (result.renderData.numRows ?? 0) > SqlQueryAudit.NUM_ROWS_WARNING_THRESHOLD;
+		if (largeNumberOfRowsReturned)
+		{
+			infoContainer.innerHTML = `
+				<p>A SQL query was executed at ${result.timeStamp ?? "(unknown time)"}</p>
+				<p>
+					The query returned <span style="color:red;font-weight:bold;">${formattedNumRows}</span> rows. This is likely to cause application performance issues.
+				</p>
+			`;
+		}
+		else
+		{
+			infoContainer.innerHTML = `
+				<p>A SQL query was executed at ${result.timeStamp ?? "(unknown time)"}</p>
+				<p>The query returned ${formattedNumRows} rows</p>
+			`;
+		}
 
 		const formattedSql = sqlFormatter.format(result.renderData.query);
 		const codeContainer = document.createElement("pre");
