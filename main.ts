@@ -88,7 +88,7 @@ async function renderFileContents(entry = selectedFileHandle)
 	logView.value = fileText;
 	logView.scrollTop = 0;
 
-	auditResultsList.onEntrySelect = (result: AuditResult, messageNum: number) => {
+	auditResultsList.onEntrySelect = (result: AuditResult<any>, messageNum: number) => {
 		logView.scrollToMessage(messageNum);
 
 		const audit = audits.find(a => a.name === result.auditName)!;

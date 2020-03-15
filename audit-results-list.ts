@@ -2,16 +2,16 @@ import { AuditResult } from "./audit.js";
 
 export class AuditResultsList extends HTMLElement
 {
-	public onEntrySelect?: (result: AuditResult, messageNum: number) => void;
+	public onEntrySelect?: (result: AuditResult<any>, messageNum: number) => void;
 
 	private shadow: ShadowRoot;
 	private renderContainer: HTMLElement;
-	private auditResults!: AuditResult[];
-	private currentSort = { propertyName: "timeStamp", desc: false } as { propertyName: keyof AuditResult, desc: boolean };
+	private auditResults!: AuditResult<any>[];
+	private currentSort = { propertyName: "timeStamp", desc: false } as { propertyName: keyof AuditResult<any>, desc: boolean };
 	private hasRenderedOnce = false;
 	private table?: HTMLTableElement;
-	private headers?: { auditResultPropertyName: keyof AuditResult, element: HTMLTableHeaderCellElement }[];
-	private selectedResult?: AuditResult;
+	private headers?: { auditResultPropertyName: keyof AuditResult<any>, element: HTMLTableHeaderCellElement }[];
+	private selectedResult?: AuditResult<any>;
 
 	constructor()
 	{
@@ -94,7 +94,7 @@ export class AuditResultsList extends HTMLElement
 		this.shadow.appendChild(this.renderContainer);
 	}
 
-	public set results(results: AuditResult[])
+	public set results(results: AuditResult<any>[])
 	{
 		this.auditResults = results;
 		this.render();
@@ -163,7 +163,7 @@ export class AuditResultsList extends HTMLElement
 		this.hasRenderedOnce = true;
 	}
 
-	private onEntryClick(auditResult: AuditResult)
+	private onEntryClick(auditResult: AuditResult<any>)
 	{
 		this.selectedResult = auditResult;
 		this.render();
@@ -171,7 +171,7 @@ export class AuditResultsList extends HTMLElement
 		this.onEntrySelect?.(this.selectedResult, auditResult.messageNum);
 	}
 
-	private onHeaderClick(auditPropertyName: keyof AuditResult, dataType: "date" | "text")
+	private onHeaderClick(auditPropertyName: keyof AuditResult<any>, dataType: "date" | "text")
 	{
 		const desc = this.currentSort.propertyName === auditPropertyName && !this.currentSort.desc;
 		this.currentSort = { propertyName: auditPropertyName, desc };
@@ -180,7 +180,7 @@ export class AuditResultsList extends HTMLElement
 		this.render();
 	}
 
-	private sortAuditResults(propertyName: keyof AuditResult, dataType: "date" | "text", desc: boolean)
+	private sortAuditResults(propertyName: keyof AuditResult<any>, dataType: "date" | "text", desc: boolean)
 	{
 		this.auditResults.sort((a, b) => {
 			const compA = a[propertyName] ?? "";

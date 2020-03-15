@@ -9,28 +9,29 @@ interface LineWithTimeStamp extends Line {
 	timeStamp?: string;
 }
 
-interface Audit {
+interface Audit<T> {
 	name: string;
-	doAudit(lines: LineWithTimeStamp[]): IterableIterator<AuditPluginResult>;
-	renderAuditDetails(result: AuditResult, container: HTMLElement): void;
+	doAudit(lines: LineWithTimeStamp[]): IterableIterator<AuditPluginResult<T>>;
+	renderAuditDetails(result: AuditResult<T>, container: HTMLElement): void;
 }
 
-interface AuditPluginResult {
+interface AuditPluginResult<T> {
 	summary: string;
 	messageNum: number;
 	timeStamp?: string;
-	renderData: any;
+	renderData: T;
 }
 
-export interface AuditResult extends AuditPluginResult {
+export interface AuditResult<T> extends AuditPluginResult<T> {
 	auditName: string;
 }
 
-class ErrorAudit implements Audit
+type ErrorAuditRenderDataType = string;
+class ErrorAudit implements Audit<ErrorAuditRenderDataType>
 {
 	public get name() { return "Errors"; }
 
-	public *doAudit(logMessages: LineWithTimeStamp[]): IterableIterator<AuditPluginResult>
+	public *doAudit(logMessages: LineWithTimeStamp[]): IterableIterator<AuditPluginResult<ErrorAuditRenderDataType>>
 	{
 		for (let line of logMessages)
 		{
@@ -48,20 +49,20 @@ class ErrorAudit implements Audit
 		}
 	}
 
-	public renderAuditDetails(result: AuditResult, container: HTMLElement): void
+	public renderAuditDetails(result: AuditResult<ErrorAuditRenderDataType>, container: HTMLElement): void
 	{
-		const errorText = result.renderData as string;
 		const pre = document.createElement("pre");
 		container.appendChild(pre);
-		pre.innerHTML = errorText.trim();
+		pre.innerHTML = result.renderData.trim();
 	}
 }
 
-class SqlQueryAudit implements Audit
+type SqlQueryAuditRenderDataType = string;
+class SqlQueryAudit implements Audit<SqlQueryAuditRenderDataType>
 {
 	public get name() { return "SQL Statements"; }
 
-	public *doAudit(logMessages: LineWithTimeStamp[]): IterableIterator<AuditPluginResult>
+	public *doAudit(logMessages: LineWithTimeStamp[]): IterableIterator<AuditPluginResult<SqlQueryAuditRenderDataType>>
 	{
 		for (let line of logMessages)
 		{
@@ -78,7 +79,7 @@ class SqlQueryAudit implements Audit
 		}
 	}
 
-	public renderAuditDetails(result: AuditResult, container: HTMLElement): void
+	public renderAuditDetails(result: AuditResult<SqlQueryAuditRenderDataType>, container: HTMLElement): void
 	{
 		container.innerHTML = result.renderData;
 	}
@@ -87,7 +88,7 @@ class SqlQueryAudit implements Audit
 export const audits = [
 	new ErrorAudit(),
 	new SqlQueryAudit(),
-] as Audit[];
+] as Audit<any>[];
 
 
 export async function *runAudits(text: string)
