@@ -7,10 +7,10 @@ export class AuditResultsList extends HTMLElement
 	private shadow: ShadowRoot;
 	private renderContainer: HTMLElement;
 	private auditResults!: AuditResult<any>[];
-	private currentSort = { propertyName: "timeStamp", desc: false } as { propertyName: keyof AuditResult<any>, desc: boolean };
+	private currentSort = { column: Column.timeStamp, desc: false } as { column: Column, desc: boolean };
 	private hasRenderedOnce = false;
 	private table?: HTMLTableElement;
-	private headers?: { auditResultPropertyName: keyof AuditResult<any>, element: HTMLTableHeaderCellElement }[];
+	private headers?: { column: Column, element: HTMLTableHeaderCellElement }[];
 	private selectedResult?: AuditResult<any>;
 
 	constructor()
@@ -88,6 +88,15 @@ export class AuditResultsList extends HTMLElement
     			overflow: hidden;
     			text-overflow: ellipsis;
 			}
+
+			td.level-indicator-cell {
+				text-align: center;
+			}
+
+			.result-level-icon {
+				height: 12px;
+				width: 12px;
+			}
 		`;
 
 		this.renderContainer = document.createElement("div");
@@ -117,43 +126,72 @@ export class AuditResultsList extends HTMLElement
 
 			this.table = document.createElement("table");
 			this.renderContainer.appendChild(this.table);
+
+			const colGroup = document.createElement("colgroup");
+			this.table.appendChild(colGroup);
 		
 			const firstRow = document.createElement("tr");
 			this.table.appendChild(firstRow);
 
+			const levelIndicatorCol = document.createElement("col");
+			colGroup.appendChild(levelIndicatorCol);
+			levelIndicatorCol.style.width = "20px";
+			const levelIndicatorHeader = document.createElement("th");
+			levelIndicatorHeader.innerHTML = "&nbsp;";
+			levelIndicatorHeader.addEventListener("click", () => this.onHeaderClick(Column.levelDescriptor));
+			firstRow.appendChild(levelIndicatorHeader);
+
+			const timeStampCol = document.createElement("col");
+			colGroup.appendChild(timeStampCol);
+			timeStampCol.style.width = "180px";
 			const timeStampHeader = document.createElement("th");
 			timeStampHeader.innerHTML = "Time";
-			timeStampHeader.addEventListener("click", () => this.onHeaderClick("timeStamp", "date"));
+			timeStampHeader.addEventListener("click", () => this.onHeaderClick(Column.timeStamp));
 			firstRow.appendChild(timeStampHeader);
 
+			const auditTypeCol = document.createElement("col");
+			colGroup.appendChild(auditTypeCol);
+			auditTypeCol.style.width = "160px";
 			const auditTypeHeader = document.createElement("th");
 			auditTypeHeader.innerHTML = "Type";
-			auditTypeHeader.addEventListener("click", () => this.onHeaderClick("auditName", "text"));
+			auditTypeHeader.addEventListener("click", () => this.onHeaderClick(Column.auditName));
 			firstRow.appendChild(auditTypeHeader);
 
+			const summaryCol = document.createElement("col");
+			colGroup.appendChild(summaryCol);
+			// summaryCol.style.width = "160px";
 			const summaryHeader = document.createElement("th");
 			summaryHeader.innerHTML = "Summary";
-			summaryHeader.addEventListener("click", () => this.onHeaderClick("summary", "text"));
+			summaryHeader.addEventListener("click", () => this.onHeaderClick(Column.summary));
 			firstRow.appendChild(summaryHeader);
 
 			this.headers = [
-				{ auditResultPropertyName: "timeStamp", element: timeStampHeader },
-				{ auditResultPropertyName: "auditName", element: auditTypeHeader },
-				{ auditResultPropertyName: "summary", element: summaryHeader },
+				{ column: Column.levelDescriptor, element: levelIndicatorHeader },
+				{ column: Column.timeStamp, element: timeStampHeader },
+				{ column: Column.auditName, element: auditTypeHeader },
+				{ column: Column.summary, element: summaryHeader },
 			];
 		}
 
 		for (let { element } of this.headers!)
 			element.removeAttribute("data-sort");
 
-		const sortHeader = this.headers!.find(h => h.auditResultPropertyName === this.currentSort.propertyName)?.element;
+		const sortHeader = this.headers!.find(h => h.column === this.currentSort.column)?.element;
 		sortHeader?.setAttribute("data-sort", this.currentSort.desc ? "desc" : "asc");
 
 		for (let result of this.auditResults)
 		{			
 			const row = document.createElement("tr");
 			this.table!.appendChild(row);
-			row.innerHTML = `<td>${result.timeStamp ?? ""}</td><td>${result.auditName}</td><td>${result.summary}</td>`;
+
+			let levelIconHtml = "";
+			if (result.resultLevel.level !== "info")
+			{
+				const levelIconUrl = result.resultLevel.level === "warning" ? "warning.svg" : result.resultLevel.level === "severe" ? "severe.svg" : null;
+				levelIconHtml = `<img src="${levelIconUrl}" class="result-level-icon">`;
+			}
+
+			row.innerHTML = `<td class="level-indicator-cell">${levelIconHtml}</td><td class="timestamp-cell">${result.timeStamp ?? ""}</td><td class="audit-name-cell">${result.auditName}</td><td class="summary-cell">${result.summary}</td>`;
 			row.onclick = () => this.onEntryClick(result);
 
 			if (this.selectedResult === result)
@@ -171,23 +209,56 @@ export class AuditResultsList extends HTMLElement
 		this.onEntrySelect?.(this.selectedResult, auditResult.messageNum);
 	}
 
-	private onHeaderClick(auditPropertyName: keyof AuditResult<any>, dataType: "date" | "text")
+	private onHeaderClick(column: Column)
 	{
-		const desc = this.currentSort.propertyName === auditPropertyName && !this.currentSort.desc;
-		this.currentSort = { propertyName: auditPropertyName, desc };
+		const desc = this.currentSort.column === column && !this.currentSort.desc;
+		this.currentSort = { column, desc };
 		
-		this.sortAuditResults(auditPropertyName, dataType, desc);
+		this.sortAuditResults(column, desc);
 		this.render();
 	}
 
-	private sortAuditResults(propertyName: keyof AuditResult<any>, dataType: "date" | "text", desc: boolean)
+	private sortAuditResults(column: Column, desc: boolean)
 	{
-		this.auditResults.sort((a, b) => {
-			const compA = a[propertyName] ?? "";
-			const compB = b[propertyName] ?? "";
-			return (compA < compB ? -1 : compB < compA ? 1 : 0) * (desc ? -1 : 1);
-		});
+		let comparator;
+
+		switch (column)
+		{
+			case Column.levelDescriptor:
+				comparator = (a: AuditResult<any>, b: AuditResult<any>) => {
+					const compA = a.resultLevel.level ?? "";
+					const compB = b.resultLevel.level ?? "";
+					return (compA < compB ? -1 : compB < compA ? 1 : 0) * (desc ? -1 : 1);
+				};
+				break;
+			case Column.timeStamp:
+				comparator = (a: AuditResult<any>, b: AuditResult<any>) => {
+					const compA = a.timeStamp ?? "";
+					const compB = b.timeStamp ?? "";
+					return (compA < compB ? -1 : compB < compA ? 1 : 0) * (desc ? -1 : 1);
+				};
+				break;
+			case Column.auditName:
+				comparator = (a: AuditResult<any>, b: AuditResult<any>) => {
+					const compA = a.auditName ?? "";
+					const compB = b.auditName ?? "";
+					return (compA < compB ? -1 : compB < compA ? 1 : 0) * (desc ? -1 : 1);
+				};
+				break;
+			case Column.summary:
+				comparator = (a: AuditResult<any>, b: AuditResult<any>) => {
+					const compA = a.summary ?? "";
+					const compB = b.summary ?? "";
+					return (compA < compB ? -1 : compB < compA ? 1 : 0) * (desc ? -1 : 1);
+				};
+				break;
+			default:
+				throw "Unhandled column type";
+		}
+		this.auditResults.sort(comparator);
 	}
 }
 
 customElements.define("audit-results-list", AuditResultsList);
+
+const enum Column { levelDescriptor, timeStamp, auditName, summary };

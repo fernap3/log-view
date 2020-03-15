@@ -19,11 +19,18 @@ interface Audit<T> {
 	renderAuditDetails(result: AuditResult<T>, container: HTMLElement): Promise<void>;
 }
 
+interface AuditResultLevelDescriptor
+{
+	level: "info" | "warning" | "severe";
+	reason?: string;
+}
+
 interface AuditPluginResult<T> {
 	summary: string;
 	messageNum: number;
 	timeStamp?: string;
 	renderData: T;
+	resultLevel: AuditResultLevelDescriptor;
 }
 
 export interface AuditResult<T> extends AuditPluginResult<T> {
@@ -33,7 +40,7 @@ export interface AuditResult<T> extends AuditPluginResult<T> {
 type ErrorAuditRenderDataType = string;
 class ErrorAudit implements Audit<ErrorAuditRenderDataType>
 {
-	public get name() { return "Errors"; }
+	public get name() { return "Error"; }
 	public get cssIncludes() { return [] };
 
 	public *doAudit(logMessages: LineWithTimeStamp[]): IterableIterator<AuditPluginResult<ErrorAuditRenderDataType>>
@@ -48,7 +55,8 @@ class ErrorAudit implements Audit<ErrorAuditRenderDataType>
 					summary: errorTextPreview,
 					messageNum: line.num,
 					timeStamp: line.timeStamp,
-					renderData: fullMessageText
+					renderData: fullMessageText,
+					resultLevel: { level: "severe" }
 				};
 			}
 		}
@@ -65,7 +73,7 @@ class ErrorAudit implements Audit<ErrorAuditRenderDataType>
 type SqlQueryAuditRenderDataType = string;
 class SqlQueryAudit implements Audit<SqlQueryAuditRenderDataType>
 {
-	public get name() { return "SQL Statements"; }
+	public get name() { return "SQL Statement"; }
 	public get cssIncludes() { return ["prism.css"] };
 
 	public *doAudit(logMessages: LineWithTimeStamp[]): IterableIterator<AuditPluginResult<SqlQueryAuditRenderDataType>>
@@ -79,7 +87,8 @@ class SqlQueryAudit implements Audit<SqlQueryAuditRenderDataType>
 					summary: sqlQuery,
 					messageNum: line.num,
 					timeStamp: line.timeStamp,
-					renderData: sqlQuery
+					renderData: sqlQuery,
+					resultLevel: { level: "info" }
 				};
 			}
 		}
