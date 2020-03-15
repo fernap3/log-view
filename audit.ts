@@ -16,9 +16,10 @@ interface Audit {
 }
 
 interface AuditPluginResult {
-	text: string;
+	summary: string;
 	messageNum: number;
 	timeStamp?: string;
+	renderData: any;
 }
 
 export interface AuditResult extends AuditPluginResult {
@@ -36,19 +37,23 @@ class ErrorAudit implements Audit
 			if (/\sERROR/.test(line.text))
 			{
 				const errorTextPreview = /\[.+\]\s+(.*)$/m.exec(line.text)?.[1] ?? "Couldn't find error text";
+				const fullMessageText = /\[.+\]\s+([\s\S]*)/m.exec(line.text)?.[1] ?? "Couldn't find full error message text";
 				yield {
-					text: errorTextPreview,
+					summary: errorTextPreview,
 					messageNum: line.num,
-					timeStamp: line.timeStamp
+					timeStamp: line.timeStamp,
+					renderData: fullMessageText
 				};
-
 			}
 		}
 	}
 
 	public renderAuditDetails(result: AuditResult, container: HTMLElement): void
 	{
-		container.innerHTML = result.text;
+		const errorText = result.renderData as string;
+		const pre = document.createElement("pre");
+		container.appendChild(pre);
+		pre.innerHTML = errorText.trim();
 	}
 }
 
@@ -62,11 +67,12 @@ class SqlQueryAudit implements Audit
 		{
 			if (/SQL Stmt:/.test(line.text))
 			{
-				const errorTextPreview = "SQL query executed";
+				const sqlQuery = /\[.+\]\s+SQL Stmt: (.*)/m.exec(line.text)?.[1] ?? "Couldn't find SQL query text";
 				yield {
-					text: errorTextPreview,
+					summary: sqlQuery,
 					messageNum: line.num,
-					timeStamp: line.timeStamp
+					timeStamp: line.timeStamp,
+					renderData: sqlQuery
 				};
 			}
 		}
@@ -74,7 +80,7 @@ class SqlQueryAudit implements Audit
 
 	public renderAuditDetails(result: AuditResult, container: HTMLElement): void
 	{
-		container.innerHTML = result.text;
+		container.innerHTML = result.renderData;
 	}
 }
 

@@ -133,13 +133,13 @@ export class AuditResultsList extends HTMLElement
 
 			const summaryHeader = document.createElement("th");
 			summaryHeader.innerHTML = "Summary";
-			summaryHeader.addEventListener("click", () => this.onHeaderClick("text", "text"));
+			summaryHeader.addEventListener("click", () => this.onHeaderClick("summary", "text"));
 			firstRow.appendChild(summaryHeader);
 
 			this.headers = [
 				{ auditResultPropertyName: "timeStamp", element: timeStampHeader },
 				{ auditResultPropertyName: "auditName", element: auditTypeHeader },
-				{ auditResultPropertyName: "text", element: summaryHeader },
+				{ auditResultPropertyName: "summary", element: summaryHeader },
 			];
 		}
 
@@ -153,7 +153,7 @@ export class AuditResultsList extends HTMLElement
 		{			
 			const row = document.createElement("tr");
 			this.table!.appendChild(row);
-			row.innerHTML = `<td>${result.timeStamp ?? ""}</td><td>${result.auditName}</td><td>${result.text}</td>`;
+			row.innerHTML = `<td>${result.timeStamp ?? ""}</td><td>${result.auditName}</td><td>${result.summary}</td>`;
 			row.onclick = () => this.onEntryClick(result);
 
 			if (this.selectedResult === result)

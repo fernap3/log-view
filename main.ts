@@ -92,6 +92,7 @@ async function renderFileContents(entry = selectedFileHandle)
 		logView.scrollToMessage(messageNum);
 
 		const audit = audits.find(a => a.name === result.auditName)!;
+		auditDetailsContainer.innerHTML = "";
 		audit.renderAuditDetails(result, auditDetailsContainer);
 	}
 
