@@ -13,6 +13,7 @@ interface LineWithTimeStamp extends Line {
 
 interface Audit<T> {
 	name: string;
+	cssIncludes: string[];
 	doAudit(lines: LineWithTimeStamp[]): IterableIterator<AuditPluginResult<T>>;
 	renderAuditDetails(result: AuditResult<T>, container: HTMLElement): Promise<void>;
 }
@@ -32,6 +33,7 @@ type ErrorAuditRenderDataType = string;
 class ErrorAudit implements Audit<ErrorAuditRenderDataType>
 {
 	public get name() { return "Errors"; }
+	public get cssIncludes() { return [] };
 
 	public *doAudit(logMessages: LineWithTimeStamp[]): IterableIterator<AuditPluginResult<ErrorAuditRenderDataType>>
 	{
@@ -63,6 +65,7 @@ type SqlQueryAuditRenderDataType = string;
 class SqlQueryAudit implements Audit<SqlQueryAuditRenderDataType>
 {
 	public get name() { return "SQL Statements"; }
+	public get cssIncludes() { return ["prism.css"] };
 
 	public *doAudit(logMessages: LineWithTimeStamp[]): IterableIterator<AuditPluginResult<SqlQueryAuditRenderDataType>>
 	{

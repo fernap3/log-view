@@ -88,10 +88,13 @@ async function renderFileContents(entry = selectedFileHandle)
 	logView.value = fileText;
 	logView.scrollTop = 0;
 
-	auditResultsList.onEntrySelect = (result: AuditResult<any>, messageNum: number) => {
+	auditResultsList.onEntrySelect = async (result: AuditResult<any>, messageNum: number) => {
 		logView.scrollToMessage(messageNum);
 
 		const audit = audits.find(a => a.name === result.auditName)!;
+
+		await Promise.all(audit.cssIncludes.map(url => loadCss(audit.name, url)));
+
 		auditDetailsContainer.innerHTML = "";
 		audit.renderAuditDetails(result, auditDetailsContainer);
 	}
@@ -101,6 +104,28 @@ async function renderFileContents(entry = selectedFileHandle)
 		auditResults.push(result);
 
 	auditResultsList.results = auditResults;
+}
+
+function loadCss(auditName: string, url: string): Promise<void>
+{
+	const linkElementId = `css-include-${auditName}`;
+	if (!document.getElementById(linkElementId))
+	{
+		return new Promise<void>((resolve, reject) => {
+			const head  = document.querySelector("head")!;
+			const link  = document.createElement("link");
+			link.id   = linkElementId;
+			link.rel  = "stylesheet";
+			link.type = "text/css";
+			link.href = url;
+			link.media = "all";
+			link.onload = () => resolve();
+			link.onerror = () => reject();
+			head.appendChild(link);
+		});
+	}
+	else
+		return Promise.resolve();
 }
 
 onPageLoad();
