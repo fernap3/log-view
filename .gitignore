@@ -1,2 +1,4 @@
 node_modules/
 bin/
+tests/**/*.js
+tests/**/*.js.map

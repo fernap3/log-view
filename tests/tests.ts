@@ -1,4 +1,3 @@
-// const { registerTest } = require("../tsc-test.js") as typeof import("../tsc-test");
 import { registerTest } from "tsc-test";
 
 registerTest({
