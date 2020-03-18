@@ -4,7 +4,7 @@
   "description": "",
   "main": "app.js",
   "scripts": {
-    "test": "npm run build && ",
+    "test": "npm run build && node tests/node_modules/tsc-test/bin/run-tests.js --testdir tests/",
     "build": "node node_modules/typescript/bin/tsc -p src/tsconfig.json && node node_modules/typescript/bin/tsc -p tests/tsconfig.json && cp -R src/* bin"
   },
   "repository": {
