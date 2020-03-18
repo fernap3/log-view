@@ -176,7 +176,7 @@ class SqlQueryAudit implements Audit<SqlQueryAuditRenderDataType>
 	public async renderAuditDetails(result: AuditResult<SqlQueryAuditRenderDataType>, container: HTMLElement)
 	{
 		await import("./prism.js" as any);
-		await import("./node_modules/sql-formatter/dist/sql-formatter.js" as any);
+		await import("./sql-formatter.js" as any);
 
 
 		const panelContainer = document.createElement("div");
@@ -232,7 +232,7 @@ class SqlQueryAudit implements Audit<SqlQueryAuditRenderDataType>
 		if (result.renderData.sqlAggregateFailureReason)
 		{
 			infoContainer.innerHTML += `
-				<p>The query did not qualify for in-database aggregation for the following reason: ${result.renderData.sqlAggregateFailureReason}</p>
+				<p>The report that generated this query did not qualify for in-database aggregation for the following reason: ${result.renderData.sqlAggregateFailureReason}</p>
 			`;
 		}
 
