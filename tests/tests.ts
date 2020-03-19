@@ -1,4 +1,4 @@
-import { registerTest } from "tsc-test";
+import { registerTest } from "astr";
 
 registerTest({
 	name: "One equals one",
